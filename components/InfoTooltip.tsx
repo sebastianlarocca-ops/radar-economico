@@ -6,47 +6,24 @@ export function InfoTooltip({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <span
-      style={{ position: "relative", display: "inline-flex", alignItems: "center" }}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
+    <span style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        className="info-i"
         aria-label="Más información"
-        style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          padding: "0 2px",
-          color: "var(--muted)",
-          fontSize: 11,
-          lineHeight: 1,
-          opacity: 0.7,
-          fontFamily: "inherit",
-        }}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onClick={() => setOpen((v) => !v)}
       >
-        ⓘ
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+          <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1" />
+          <circle cx="6" cy="3.5" r="0.7" fill="currentColor" />
+          <path d="M6 5.4 V8.7" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+        </svg>
       </button>
-      {open && (
+      {open && text && (
         <span
-          style={{
-            position: "absolute",
-            bottom: "calc(100% + 6px)",
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "#1e293b",
-            color: "#f1f5f9",
-            fontSize: 11,
-            lineHeight: 1.4,
-            padding: "6px 9px",
-            borderRadius: 7,
-            whiteSpace: "normal",
-            maxWidth: 220,
-            zIndex: 50,
-            pointerEvents: "none",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
-          }}
+          className="mp-tooltip"
+          style={{ bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)", width: 230 }}
         >
           {text}
         </span>

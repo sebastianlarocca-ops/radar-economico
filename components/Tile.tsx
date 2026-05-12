@@ -12,7 +12,7 @@ function formatValue(row: LatestRow): string {
     }).format(row.value);
   }
   if (row.unit === "USD") {
-    return new Intl.NumberFormat("es-AR", {
+    return new Intl.NumberFormat("en-US", {
       style: "currency", currency: "USD",
       maximumFractionDigits: d, minimumFractionDigits: d,
     }).format(row.value);
@@ -27,18 +27,18 @@ function formatTs(ts: string | null): string {
   if (!ts) return "sin datos";
   const dt = new Date(ts);
   if (isNaN(dt.getTime())) return "sin datos";
-  return dt.toLocaleString("es-AR", {
-    day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-  });
+  const m = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  return `${String(dt.getUTCDate()).padStart(2,"0")} ${m[dt.getUTCMonth()]} · ${String(dt.getUTCHours()).padStart(2,"0")}:${String(dt.getUTCMinutes()).padStart(2,"0")}`;
 }
 
 export function Tile({
   row,
   sub,
   sparkline,
-  sparkColor,
+  sparkColor = "#5B9DFF",
   info,
   staleAfterDays,
+  glowColor,
 }: {
   row: LatestRow;
   sub?: string;
@@ -46,38 +46,47 @@ export function Tile({
   sparkColor?: string;
   info?: string;
   staleAfterDays?: number;
+  glowColor?: string;
 }) {
-  const change = (row.meta && typeof row.meta.change_24h_pct === "number")
-    ? row.meta.change_24h_pct as number
-    : null;
+  const isStale =
+    staleAfterDays != null &&
+    row.timestamp != null &&
+    (Date.now() - new Date(row.timestamp).getTime()) / 86400000 > staleAfterDays;
 
-  const isStale = staleAfterDays != null && row.timestamp != null
-    && (Date.now() - new Date(row.timestamp).getTime()) / 86400000 > staleAfterDays;
+  const glow = glowColor ?? (sparkColor + "29");
 
   return (
-    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 flex flex-col gap-1 min-h-[100px]">
-      <div className="flex items-center gap-1">
-        <div className="text-[10.5px] uppercase tracking-wider font-semibold text-[var(--muted)] flex-1">{row.label}</div>
-        {isStale && (
-          <span
-            title="Dato desactualizado"
-            className="inline-flex items-center justify-center w-[14px] h-[14px] rounded-full bg-amber-500 text-white text-[8px] font-bold shrink-0"
-          >!</span>
-        )}
-        {info && <InfoTooltip text={info} />}
-      </div>
-      <div className="text-[19px] font-semibold tracking-tight leading-tight num">{formatValue(row)}</div>
-      {change != null && (
-        <div className={`text-[11px] font-medium ${change >= 0 ? "text-[var(--pos)]" : "text-[var(--neg)]"}`}>
-          24h {change >= 0 ? "+" : ""}{change.toFixed(2)}%
+    <div
+      className="mp-card mp-tile mp-tile-glow"
+      style={{
+        padding: "16px 16px 0",
+        minHeight: 138,
+        ["--glow" as string]: glow,
+      }}
+    >
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="kpi-label">{row.label}</div>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          {isStale && <span className="stale-dot" title="Dato desactualizado" />}
+          {info && <InfoTooltip text={info} />}
         </div>
-      )}
-      <div className="text-[11px] text-[var(--muted)] mt-auto">
+      </div>
+
+      {/* Value */}
+      <div className="kpi-value" style={{ marginTop: 10 }}>{formatValue(row)}</div>
+
+      {/* Sub */}
+      <div className="kpi-sub" style={{ marginTop: 6 }}>
         {sub || (row.source ? `${row.source} · ${formatTs(row.timestamp)}` : "sin datos")}
       </div>
-      {sparkline && sparkline.length > 0 && (
-        <Sparkline data={sparkline} color={sparkColor ?? "#2563eb"} />
-      )}
+
+      {/* Sparkline pinned to bottom */}
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 50 }}>
+        {sparkline && sparkline.length > 1 && (
+          <Sparkline data={sparkline} color={sparkColor} height={50} />
+        )}
+      </div>
     </div>
   );
 }
