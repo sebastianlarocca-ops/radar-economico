@@ -55,9 +55,7 @@ export const INDICATORS: IndicatorMeta[] = [
   // China (FRED mirrors)
   // ============================================
   { id: "cn.cpi.yoy",                     label: "CPI YoY",                    region: "CN", category: "inflation", unit: "PCT",   decimals: 1, source: "fred", fred: { series_id: "CHNCPIALLMINMEI", units: "pc1" } },
-  { id: "cn.ppi.yoy",                     label: "PPI YoY",                    region: "CN", category: "inflation", unit: "PCT",   decimals: 1, source: "fred", fred: { series_id: "PPICHO01CNM661N", units: "pc1" } },
   { id: "cn.fx.usdcny",                   label: "USD/CNY",                    region: "CN", category: "fx",        unit: "RATIO", decimals: 4, source: "fred", fred: { series_id: "DEXCHUS" } },
-  { id: "cn.pmi.caixin",                  label: "PMI Caixin (manufactura)",   region: "CN", category: "activity",  unit: "INDEX", decimals: 1, source: "fred", fred: { series_id: "CHNMFGPMI" } },
 ];
 
 /** Map for O(1) lookup. */
