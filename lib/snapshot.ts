@@ -4,6 +4,7 @@ import { fetchCoinGeckoCurrent } from "./sources/coingecko";
 import { fetchArgentinaDatosCurrent } from "./sources/argentinadatos";
 import { fetchBcraCurrent } from "./sources/bcra";
 import { fetchFredCurrent } from "./sources/fred";
+import { fetchEcbCurrent } from "./sources/ecb";
 import type { IndicatorValue } from "./types";
 
 export type SnapshotResult = {
@@ -25,6 +26,7 @@ export async function runSnapshot(): Promise<SnapshotResult> {
     { name: "argentinadatos", fn: fetchArgentinaDatosCurrent },
     { name: "bcra", fn: fetchBcraCurrent },
     { name: "fred", fn: fetchFredCurrent },
+    { name: "ecb",  fn: fetchEcbCurrent },
   ];
 
   const errors: SnapshotResult["errors"] = [];

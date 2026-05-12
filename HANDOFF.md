@@ -25,7 +25,7 @@ editar en worktree → npm run build → commit → push → PR → merge → Ve
 
 Dashboard mobile-first de indicadores macro y financieros — Argentina (FX, riesgo país, IPC, BCRA), USA (FRED), China (FRED). Stack: Next.js 15 + TypeScript + Tailwind + MongoDB Atlas, desplegado en Vercel con cron diario.
 
-**Estado actual en una línea:** v0.3 parcialmente completo — BCRA fix + CoinGecko history + China (CPI/FX) en producción. Eurozona pendiente. El siguiente paso es continuar v0.3: Eurozona + UX derivados + health endpoint.
+**Estado actual en una línea:** v0.3 parcialmente completo — BCRA fix + CoinGecko history + China (CPI/FX) + UX derivados (BTC/ARS, brechas USDT, stale badge) en producción. Falta: Eurozona (ECB SDW) + health endpoint + cron_runs log.
 
 ---
 
@@ -49,6 +49,7 @@ URL: `https://radar-economico-one.vercel.app`
 | #7 | BCRA: switch tasa política a variable 150 (pases O/N, ~20%). CoinGecko: agrega `x-cg-demo-api-key` header. |
 | #8 | CoinGecko: cap history a 365d (demo tier limit). |
 | #9/#10 | China: CPI YoY (CHNCPIALLMINMEI) + USD/CNY (DEXCHUS) vía FRED. PPI/PMI removidos (series inexistentes en FRED). |
+| #11 | UX derivados: tile BTC/ARS (client-side), tiles USDT vs Blue / USDT vs CCL, stale badge ámbar en Tile. |
 
 ### Estado de los datos en MongoDB (al 2026-05-12)
 
@@ -214,10 +215,10 @@ curl -X POST "$URL/api/admin/backfill?source=coingecko&years=1"      -H "Authori
   - Fuente: ECB SDW (SDMX REST)
   - Crear `lib/sources/ecb.ts` + wire en snapshot/backfill
 
-**UX:**
-- BTC/ARS derivado: BTC × USDT (crypto) — computar client-side
-- Brechas stables vs blue y vs CCL como tiles derivados
-- Stale indicator badge: cuando `timestamp` del último dato tiene > N días, mostrar advertencia visible
+**UX:** ✅ completado en PR #11
+- ~~BTC/ARS derivado~~ — en producción
+- ~~Brechas stables vs blue y vs CCL~~ — en producción
+- ~~Stale indicator badge~~ — en producción
 
 **Operations:**
 - Health check `/api/health`: last cron timestamp + Mongo connectivity + source staleness
