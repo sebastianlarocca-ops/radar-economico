@@ -44,7 +44,7 @@ const INFO: Record<string, string> = {
   "ar.dolar.tarjeta.venta":     "Dólar oficial más el impuesto PAIS (hasta 2024) y percepción de Ganancias. El que pagás con tarjeta en el exterior.",
   "ar.riesgo_pais":             "EMBI+: mide cuánto más rinde un bono argentino vs un bono del Tesoro de EE.UU. Más puntos = mercado percibe más riesgo de default.",
   "ar.ipc.mensual":             "Variación del Índice de Precios al Consumidor en un mes. Dato oficial del INDEC. Mide la inflación mensual.",
-  "ar.bcra.tasa_politica":      "Tasa de referencia del BCRA para orientar el costo del dinero. Afecta tasas de plazos fijos, préstamos y pases.",
+  "ar.bcra.tasa_politica":      "Tasa overnight de pases entre entidades (O/N). Refleja el piso del corredor de tasas del BCRA desde la transición al esquema LEFI en jul-2025.",
   "ar.bcra.reservas":           "Activos del BCRA en moneda extranjera. Clave para la estabilidad cambiaria y el pago de deuda externa. En millones de USD.",
   "ar.bcra.base_monetaria":     "Total de pesos emitidos por el BCRA. Incluye billetes en circulación y depósitos bancarios en el BCRA.",
   "crypto.btc.usd":             "Precio de mercado de Bitcoin en dólares. Activo digital descentralizado, oferta máxima de 21 millones.",
@@ -63,7 +63,7 @@ const CHART_INFO: Record<string, string> = {
   "brecha":           "Diferencia porcentual de cada cotización vs el dólar oficial. Mide la distorsión del mercado cambiario.",
   "riesgo":           "Evolución del EMBI+ Argentina. Cae cuando el mercado percibe menos riesgo de default.",
   "ipc-chart":        "Inflación mensual registrada por el INDEC. Cada barra es un mes.",
-  "bcra-variables":   "Evolución de la tasa de política monetaria del BCRA en el período.",
+  "bcra-variables":   "Evolución de la tasa overnight de pases entre terceros (O/N). Proxy de la tasa de referencia desde la transición al esquema LEFI.",
   "crypto-chart":     "Precio de BTC (eje izquierdo) y ETH (eje derecho) en dólares. Ejes separados por la diferencia de escala.",
   "fed-rates":        "Evolución de la tasa Fed Funds y el rendimiento del bono del Tesoro a 10 años.",
   "us-cpi":           "Inflación interanual de EE.UU. Dato mensual — se actualiza una vez al mes.",
@@ -393,12 +393,12 @@ export function DashboardClient({
         </div>
 
         <ChartBox
-          title="Tasa de política monetaria"
+          title="Tasa pases O/N"
           hint="% · BCRA"
           infoKey="bcra-variables"
           noData={spark("ar.bcra.tasa_politica").length < 2}
         >
-          <LineChart datasets={[{ label: "Tasa política", data: spark("ar.bcra.tasa_politica"), color: COLORS.tasa }]} />
+          <LineChart datasets={[{ label: "Tasa O/N", data: spark("ar.bcra.tasa_politica"), color: COLORS.tasa }]} />
         </ChartBox>
       </Section>
 
