@@ -51,7 +51,10 @@ export async function fetchCoinGeckoCurrent(): Promise<IndicatorValue[]> {
 export async function fetchCoinGeckoHistory(from: Date): Promise<IndicatorValue[]> {
   const indicators = indicatorsBySource("coingecko");
   const out: IndicatorValue[] = [];
-  const days = Math.max(1, Math.ceil((Date.now() - from.getTime()) / 86400000));
+  // CoinGecko demo tier caps market_chart at 365 days per request.
+  const days = Math.min(365, Math.max(1, Math.ceil((Date.now() - from.getTime()) / 86400000)));
+  const hasKey = !!process.env.COINGECKO_API_KEY;
+  console.log(`[coingecko] history start — days=${days} hasKey=${hasKey}`);
   for (const ind of indicators) {
     const coin = ind.coingecko?.coin_id;
     if (!coin) continue;
