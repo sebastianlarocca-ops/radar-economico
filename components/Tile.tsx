@@ -38,20 +38,32 @@ export function Tile({
   sparkline,
   sparkColor,
   info,
+  staleAfterDays,
 }: {
   row: LatestRow;
   sub?: string;
   sparkline?: DataPoint[];
   sparkColor?: string;
   info?: string;
+  staleAfterDays?: number;
 }) {
   const change = (row.meta && typeof row.meta.change_24h_pct === "number")
     ? row.meta.change_24h_pct as number
     : null;
+
+  const isStale = staleAfterDays != null && row.timestamp != null
+    && (Date.now() - new Date(row.timestamp).getTime()) / 86400000 > staleAfterDays;
+
   return (
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 flex flex-col gap-1 min-h-[100px]">
       <div className="flex items-center gap-1">
         <div className="text-[10.5px] uppercase tracking-wider font-semibold text-[var(--muted)] flex-1">{row.label}</div>
+        {isStale && (
+          <span
+            title="Dato desactualizado"
+            className="inline-flex items-center justify-center w-[14px] h-[14px] rounded-full bg-amber-500 text-white text-[8px] font-bold shrink-0"
+          >!</span>
+        )}
         {info && <InfoTooltip text={info} />}
       </div>
       <div className="text-[19px] font-semibold tracking-tight leading-tight num">{formatValue(row)}</div>
