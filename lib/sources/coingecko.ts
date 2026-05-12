@@ -4,6 +4,12 @@ import { startOfDayUtc, isoDate } from "../dates";
 
 const BASE = "https://api.coingecko.com/api/v3";
 
+function cgHeaders(): Record<string, string> {
+  const h: Record<string, string> = { "Accept": "application/json", "User-Agent": "radar-economico/0.3" };
+  if (process.env.COINGECKO_API_KEY) h["x-cg-demo-api-key"] = process.env.COINGECKO_API_KEY;
+  return h;
+}
+
 type SimplePriceResponse = Record<string, { usd?: number; usd_24h_change?: number }>;
 type MarketChartResponse = { prices: Array<[number, number]> };
 
@@ -14,7 +20,7 @@ export async function fetchCoinGeckoCurrent(): Promise<IndicatorValue[]> {
   if (ids.length === 0) return [];
   const url = `${BASE}/simple/price?ids=${ids.join(",")}&vs_currencies=usd&include_24hr_change=true`;
   const r = await fetch(url, {
-    headers: { "Accept": "application/json", "User-Agent": "radar-economico/0.2" },
+    headers: cgHeaders(),
     next: { revalidate: 0 },
   });
   if (!r.ok) throw new Error(`CoinGecko HTTP ${r.status}`);
@@ -39,8 +45,8 @@ export async function fetchCoinGeckoCurrent(): Promise<IndicatorValue[]> {
 
 /**
  * Historical daily series for each crypto indicator.
- * CoinGecko free tier: `days=N` returns up to N days of history.
- * For 5 years (~1825 days), the free endpoint may auto-coarsen to daily granularity (which is what we want).
+ * Requires COINGECKO_API_KEY (demo tier) — the /market_chart endpoint is blocked
+ * for server IPs on the free (no-key) tier.
  */
 export async function fetchCoinGeckoHistory(from: Date): Promise<IndicatorValue[]> {
   const indicators = indicatorsBySource("coingecko");
@@ -52,7 +58,7 @@ export async function fetchCoinGeckoHistory(from: Date): Promise<IndicatorValue[
     try {
       const url = `${BASE}/coins/${coin}/market_chart?vs_currency=usd&days=${days}`;
       const r = await fetch(url, {
-        headers: { "Accept": "application/json", "User-Agent": "radar-economico/0.2" },
+        headers: cgHeaders(),
         next: { revalidate: 0 },
       });
       if (!r.ok) {
@@ -75,8 +81,7 @@ export async function fetchCoinGeckoHistory(from: Date): Promise<IndicatorValue[
           meta: { coin, source_ts: new Date(rec.ts).toISOString() },
         });
       }
-      // Small spacing between coins to be polite with CoinGecko's free tier rate limit.
-      await new Promise(res => setTimeout(res, 200));
+      await new Promise(res => setTimeout(res, 300));
     } catch (e) {
       console.warn(`[coingecko] history failed for ${coin}:`, e);
     }

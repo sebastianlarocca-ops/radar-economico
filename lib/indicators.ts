@@ -31,7 +31,7 @@ export const INDICATORS: IndicatorMeta[] = [
   // ============================================
   // AR — Monetary / fiscal (BCRA Principales Variables)
   // ============================================
-  { id: "ar.bcra.tasa_politica",          label: "Tasa de política BCRA",     region: "AR", category: "rates",  unit: "PCT", decimals: 2, source: "bcra", bcra: { pattern: /tasa.*pol[ií]tica/i } },
+  { id: "ar.bcra.tasa_politica",          label: "Tasa pases O/N",            region: "AR", category: "rates",  unit: "PCT", decimals: 2, source: "bcra", bcra: { pattern: /pases entre terceros.*1 d[ií]a/i } },
   { id: "ar.bcra.reservas",               label: "Reservas internacionales",  region: "AR", category: "fiscal", unit: "USD", decimals: 0, source: "bcra", bcra: { pattern: /reservas\s+internacionales/i } },
   { id: "ar.bcra.base_monetaria",         label: "Base monetaria",            region: "AR", category: "rates",  unit: "ARS", decimals: 0, source: "bcra", bcra: { pattern: /base\s+monetaria/i } },
 
