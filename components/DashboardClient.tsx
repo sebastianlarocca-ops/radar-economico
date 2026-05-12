@@ -276,7 +276,7 @@ function Header({
             </svg>
           </span>
           <span>
-            Macro Pulse{" "}
+            Macro <span className="brand-pulse">Pulse</span>{" "}
             <span style={{ fontSize: 10, color: "var(--t-4)", letterSpacing: "0.06em", fontWeight: 400 }}>v0.3</span>
           </span>
         </div>
