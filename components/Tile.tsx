@@ -1,5 +1,6 @@
 import type { LatestRow } from "@/app/api/snapshots/latest/route";
 import { Sparkline, type DataPoint } from "./charts";
+import { InfoTooltip } from "./InfoTooltip";
 
 function formatValue(row: LatestRow): string {
   if (row.value == null || !isFinite(row.value)) return "—";
@@ -36,18 +37,23 @@ export function Tile({
   sub,
   sparkline,
   sparkColor,
+  info,
 }: {
   row: LatestRow;
   sub?: string;
   sparkline?: DataPoint[];
   sparkColor?: string;
+  info?: string;
 }) {
   const change = (row.meta && typeof row.meta.change_24h_pct === "number")
     ? row.meta.change_24h_pct as number
     : null;
   return (
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 flex flex-col gap-1 min-h-[100px]">
-      <div className="text-[10.5px] uppercase tracking-wider font-semibold text-[var(--muted)]">{row.label}</div>
+      <div className="flex items-center gap-1">
+        <div className="text-[10.5px] uppercase tracking-wider font-semibold text-[var(--muted)] flex-1">{row.label}</div>
+        {info && <InfoTooltip text={info} />}
+      </div>
       <div className="text-[19px] font-semibold tracking-tight leading-tight num">{formatValue(row)}</div>
       {change != null && (
         <div className={`text-[11px] font-medium ${change >= 0 ? "text-[var(--pos)]" : "text-[var(--neg)]"}`}>
