@@ -1,4 +1,5 @@
 import type { LatestRow } from "@/app/api/snapshots/latest/route";
+import { Sparkline, type DataPoint } from "./charts";
 
 function formatValue(row: LatestRow): string {
   if (row.value == null || !isFinite(row.value)) return "—";
@@ -30,7 +31,17 @@ function formatTs(ts: string | null): string {
   });
 }
 
-export function Tile({ row, sub }: { row: LatestRow; sub?: string }) {
+export function Tile({
+  row,
+  sub,
+  sparkline,
+  sparkColor,
+}: {
+  row: LatestRow;
+  sub?: string;
+  sparkline?: DataPoint[];
+  sparkColor?: string;
+}) {
   const change = (row.meta && typeof row.meta.change_24h_pct === "number")
     ? row.meta.change_24h_pct as number
     : null;
@@ -46,6 +57,9 @@ export function Tile({ row, sub }: { row: LatestRow; sub?: string }) {
       <div className="text-[11px] text-[var(--muted)] mt-auto">
         {sub || (row.source ? `${row.source} · ${formatTs(row.timestamp)}` : "sin datos")}
       </div>
+      {sparkline && sparkline.length > 0 && (
+        <Sparkline data={sparkline} color={sparkColor ?? "#2563eb"} />
+      )}
     </div>
   );
 }

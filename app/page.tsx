@@ -4,34 +4,26 @@ import type { LatestRow } from "@/app/api/snapshots/latest/route";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-async function loadLatest(): Promise<LatestRow[]> {
-  // Server-side fetch — relative URLs don't work in server fetches in Next 15,
-  // so we go straight to the source on first paint.
-  const { getIndicatorValuesCollection } = await import("@/lib/mongodb");
+type SeriesPoint = { t: string; v: number };
+
+async function loadData(): Promise<{
+  latest: LatestRow[];
+  history: Record<string, SeriesPoint[]>;
+}> {
+  const { getLatestByIds, getHistorySince } = await import("@/lib/mongodb");
   const { INDICATORS } = await import("@/lib/indicators");
+  const { daysAgoStartOfDayUtc } = await import("@/lib/dates");
+
+  const ids = INDICATORS.map((i) => i.id);
 
   try {
-    const col = await getIndicatorValuesCollection();
-    const ids = INDICATORS.map(i => i.id);
-    const cursor = col.aggregate<{ _id: string; value: number; timestamp: Date; source: string; meta?: Record<string, unknown> }>([
-      { $match: { indicator: { $in: ids } } },
-      { $sort: { indicator: 1, timestamp: -1 } },
-      {
-        $group: {
-          _id: "$indicator",
-          value: { $first: "$value" },
-          timestamp: { $first: "$timestamp" },
-          source: { $first: "$source" },
-          meta: { $first: "$meta" },
-        }
-      }
+    const [latestMap, historyMap] = await Promise.all([
+      getLatestByIds(ids),
+      getHistorySince(ids, daysAgoStartOfDayUtc(365)),
     ]);
-    const byId = new Map<string, { value: number; timestamp: Date; source: string; meta?: Record<string, unknown> }>();
-    for await (const doc of cursor) {
-      byId.set(doc._id, { value: doc.value, timestamp: doc.timestamp, source: doc.source, meta: doc.meta });
-    }
-    return INDICATORS.map(ind => {
-      const v = byId.get(ind.id);
+
+    const latest: LatestRow[] = INDICATORS.map((ind) => {
+      const v = latestMap.get(ind.id);
       return {
         id: ind.id,
         label: ind.label,
@@ -45,9 +37,20 @@ async function loadLatest(): Promise<LatestRow[]> {
         meta: v?.meta ?? null,
       } as LatestRow;
     });
+
+    const history: Record<string, SeriesPoint[]> = {};
+    for (const id of ids) {
+      const arr = historyMap.get(id) ?? [];
+      history[id] = arr.map((v) => ({
+        t: v.timestamp.toISOString().slice(0, 10),
+        v: v.value,
+      }));
+    }
+
+    return { latest, history };
   } catch (e) {
-    console.error("[page] failed to load latest:", e);
-    return INDICATORS.map(ind => ({
+    console.error("[page] failed to load data:", e);
+    const latest: LatestRow[] = INDICATORS.map((ind) => ({
       id: ind.id,
       label: ind.label,
       region: ind.region,
@@ -59,10 +62,11 @@ async function loadLatest(): Promise<LatestRow[]> {
       source: null,
       meta: null,
     } as LatestRow));
+    return { latest, history: {} };
   }
 }
 
 export default async function Page() {
-  const rows = await loadLatest();
-  return <Dashboard rows={rows} />;
+  const { latest, history } = await loadData();
+  return <Dashboard latest={latest} history={history} />;
 }

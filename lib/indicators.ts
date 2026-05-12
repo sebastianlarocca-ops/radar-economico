@@ -2,26 +2,62 @@ import type { IndicatorMeta } from "./types";
 
 /**
  * Central registry of every indicator the radar tracks.
- * Adding a new indicator: add a row here, then add the matching write
- * in the source's fetcher under lib/sources/.
+ *
+ * To add an indicator:
+ * 1. Add a row here with `source` + the matching source-config block.
+ * 2. Make sure the source module knows how to handle it (it reads this registry).
+ *
+ * IDs follow the convention: <region>.<category>.<detail>
  */
 export const INDICATORS: IndicatorMeta[] = [
-  // -------- AR FX --------
-  { id: "ar.dolar.oficial.venta",         label: "Dólar oficial (venta)",     region: "AR", category: "fx",     unit: "ARS", decimals: 0, source: "dolarapi" },
-  { id: "ar.dolar.oficial.compra",        label: "Dólar oficial (compra)",    region: "AR", category: "fx",     unit: "ARS", decimals: 0, source: "dolarapi" },
-  { id: "ar.dolar.mayorista.venta",       label: "Dólar mayorista A3500",     region: "AR", category: "fx",     unit: "ARS", decimals: 0, source: "dolarapi" },
-  { id: "ar.dolar.blue.venta",            label: "Dólar blue (venta)",        region: "AR", category: "fx",     unit: "ARS", decimals: 0, source: "dolarapi" },
-  { id: "ar.dolar.mep.venta",             label: "Dólar MEP (venta)",         region: "AR", category: "fx",     unit: "ARS", decimals: 0, source: "dolarapi" },
-  { id: "ar.dolar.ccl.venta",             label: "Dólar CCL (venta)",         region: "AR", category: "fx",     unit: "ARS", decimals: 0, source: "dolarapi" },
-  { id: "ar.dolar.cripto.venta",          label: "Dólar cripto / USDT",       region: "AR", category: "fx",     unit: "ARS", decimals: 0, source: "dolarapi" },
-  { id: "ar.dolar.tarjeta.venta",         label: "Dólar tarjeta",             region: "AR", category: "fx",     unit: "ARS", decimals: 0, source: "dolarapi" },
+  // ============================================
+  // AR — FX (DolarAPI for current, ArgentinaDatos for history)
+  // ============================================
+  { id: "ar.dolar.oficial.venta",         label: "Dólar oficial (venta)",     region: "AR", category: "fx", unit: "ARS", decimals: 0, source: "dolarapi", dolarapi: { casa: "oficial", leg: "venta" } },
+  { id: "ar.dolar.oficial.compra",        label: "Dólar oficial (compra)",    region: "AR", category: "fx", unit: "ARS", decimals: 0, source: "dolarapi", dolarapi: { casa: "oficial", leg: "compra" } },
+  { id: "ar.dolar.mayorista.venta",       label: "Dólar mayorista A3500",     region: "AR", category: "fx", unit: "ARS", decimals: 0, source: "dolarapi", dolarapi: { casa: "mayorista", leg: "venta" } },
+  { id: "ar.dolar.blue.venta",            label: "Dólar blue (venta)",        region: "AR", category: "fx", unit: "ARS", decimals: 0, source: "dolarapi", dolarapi: { casa: "blue", leg: "venta" } },
+  { id: "ar.dolar.mep.venta",             label: "Dólar MEP (venta)",         region: "AR", category: "fx", unit: "ARS", decimals: 0, source: "dolarapi", dolarapi: { casa: "bolsa", leg: "venta" } },
+  { id: "ar.dolar.ccl.venta",             label: "Dólar CCL (venta)",         region: "AR", category: "fx", unit: "ARS", decimals: 0, source: "dolarapi", dolarapi: { casa: "contadoconliqui", leg: "venta" } },
+  { id: "ar.dolar.cripto.venta",          label: "Dólar cripto / USDT",       region: "AR", category: "fx", unit: "ARS", decimals: 0, source: "dolarapi", dolarapi: { casa: "cripto", leg: "venta" } },
+  { id: "ar.dolar.tarjeta.venta",         label: "Dólar tarjeta",             region: "AR", category: "fx", unit: "ARS", decimals: 0, source: "dolarapi", dolarapi: { casa: "tarjeta", leg: "venta" } },
 
-  // -------- Crypto --------
-  { id: "crypto.btc.usd",                 label: "Bitcoin",                   region: "GLOBAL", category: "crypto", unit: "USD", decimals: 0, source: "coingecko" },
-  { id: "crypto.eth.usd",                 label: "Ethereum",                  region: "GLOBAL", category: "crypto", unit: "USD", decimals: 0, source: "coingecko" },
+  // ============================================
+  // AR — Risk & inflation (ArgentinaDatos)
+  // ============================================
+  { id: "ar.riesgo_pais",                 label: "Riesgo país (EMBI+ AR)",    region: "AR", category: "risk",       unit: "BPS",    decimals: 0, source: "argentinadatos", argentinadatos: { type: "riesgo_pais" } },
+  { id: "ar.ipc.mensual",                 label: "IPC mensual",               region: "AR", category: "inflation",  unit: "PCT",    decimals: 1, source: "argentinadatos", argentinadatos: { type: "ipc" } },
+
+  // ============================================
+  // AR — Monetary / fiscal (BCRA Principales Variables)
+  // ============================================
+  { id: "ar.bcra.tasa_politica",          label: "Tasa de política BCRA",     region: "AR", category: "rates",  unit: "PCT", decimals: 2, source: "bcra", bcra: { pattern: /tasa.*pol[ií]tica/i } },
+  { id: "ar.bcra.reservas",               label: "Reservas internacionales",  region: "AR", category: "fiscal", unit: "USD", decimals: 0, source: "bcra", bcra: { pattern: /reservas\s+internacionales/i } },
+  { id: "ar.bcra.base_monetaria",         label: "Base monetaria",            region: "AR", category: "rates",  unit: "ARS", decimals: 0, source: "bcra", bcra: { pattern: /base\s+monetaria/i } },
+
+  // ============================================
+  // Crypto (CoinGecko)
+  // ============================================
+  { id: "crypto.btc.usd",                 label: "Bitcoin",                   region: "GLOBAL", category: "crypto", unit: "USD", decimals: 0, source: "coingecko", coingecko: { coin_id: "bitcoin",  vs: "usd" } },
+  { id: "crypto.eth.usd",                 label: "Ethereum",                  region: "GLOBAL", category: "crypto", unit: "USD", decimals: 0, source: "coingecko", coingecko: { coin_id: "ethereum", vs: "usd" } },
+
+  // ============================================
+  // USA (FRED)
+  // ============================================
+  { id: "us.fed_funds.upper",             label: "Fed Funds (rango superior)", region: "US", category: "rates",     unit: "PCT", decimals: 2, source: "fred", fred: { series_id: "DFEDTARU" } },
+  { id: "us.ust.dgs10",                   label: "UST 10Y",                    region: "US", category: "rates",     unit: "PCT", decimals: 2, source: "fred", fred: { series_id: "DGS10" } },
+  { id: "us.cpi.yoy",                     label: "CPI YoY",                    region: "US", category: "inflation", unit: "PCT", decimals: 1, source: "fred", fred: { series_id: "CPIAUCSL", units: "pc1" } },
+  { id: "us.unrate",                      label: "Unemployment rate",          region: "US", category: "activity",  unit: "PCT", decimals: 1, source: "fred", fred: { series_id: "UNRATE" } },
+  { id: "us.payems",                      label: "Nonfarm Payrolls",           region: "US", category: "activity",  unit: "NUMBER", decimals: 0, source: "fred", fred: { series_id: "PAYEMS" } },
+  { id: "us.dxy_broad",                   label: "USD index (broad TW)",       region: "US", category: "fx",        unit: "INDEX", decimals: 2, source: "fred", fred: { series_id: "DTWEXBGS" } },
 ];
 
 /** Map for O(1) lookup. */
 export const INDICATOR_BY_ID: Record<string, IndicatorMeta> = Object.fromEntries(
   INDICATORS.map(i => [i.id, i])
 );
+
+/** Filter helpers. */
+export function indicatorsBySource(source: IndicatorMeta["source"]): IndicatorMeta[] {
+  return INDICATORS.filter(i => i.source === source);
+}
