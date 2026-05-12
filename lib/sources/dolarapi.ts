@@ -1,57 +1,49 @@
 import type { IndicatorValue } from "../types";
+import { indicatorsBySource } from "../indicators";
+import { startOfDayUtc } from "../dates";
 
 const ENDPOINT = "https://dolarapi.com/v1/dolares";
 
 type DolarApiRow = {
-  casa: string;       // "oficial" | "blue" | "bolsa" | "contadoconliqui" | "cripto" | "tarjeta" | "mayorista"
+  casa: string;
   nombre: string;
   compra: number | null;
   venta: number | null;
   fechaActualizacion: string;
 };
 
-// Map DolarAPI's `casa` to our indicator id slug for the "venta" leg.
-const CASA_TO_ID: Record<string, { venta: string; compra?: string }> = {
-  oficial:          { venta: "ar.dolar.oficial.venta",    compra: "ar.dolar.oficial.compra" },
-  mayorista:        { venta: "ar.dolar.mayorista.venta" },
-  blue:             { venta: "ar.dolar.blue.venta" },
-  bolsa:            { venta: "ar.dolar.mep.venta" },
-  contadoconliqui:  { venta: "ar.dolar.ccl.venta" },
-  cripto:           { venta: "ar.dolar.cripto.venta" },
-  tarjeta:          { venta: "ar.dolar.tarjeta.venta" },
-};
-
-export async function fetchDolarApi(): Promise<IndicatorValue[]> {
+/**
+ * Current snapshot for every dolar indicator configured in the registry.
+ * DolarAPI has no history endpoint — we use ArgentinaDatos for that.
+ */
+export async function fetchDolarApiCurrent(): Promise<IndicatorValue[]> {
   const r = await fetch(ENDPOINT, {
-    headers: { "Accept": "application/json", "User-Agent": "radar-economico/0.1" },
+    headers: { "Accept": "application/json", "User-Agent": "radar-economico/0.2" },
     next: { revalidate: 0 },
   });
   if (!r.ok) throw new Error(`DolarAPI HTTP ${r.status}`);
   const rows = (await r.json()) as DolarApiRow[];
+
+  const byCasa: Record<string, DolarApiRow> = {};
+  for (const row of rows) if (row && row.casa) byCasa[row.casa] = row;
+
+  const indicators = indicatorsBySource("dolarapi");
   const out: IndicatorValue[] = [];
-  const now = new Date();
-  for (const row of rows) {
-    const mapping = CASA_TO_ID[row.casa];
-    if (!mapping) continue;
-    const ts = row.fechaActualizacion ? new Date(row.fechaActualizacion) : now;
-    if (mapping.venta && row.venta != null) {
-      out.push({
-        indicator: mapping.venta,
-        timestamp: ts,
-        value: row.venta,
-        source: "dolarapi",
-        meta: { casa: row.casa, leg: "venta" },
-      });
-    }
-    if (mapping.compra && row.compra != null) {
-      out.push({
-        indicator: mapping.compra,
-        timestamp: ts,
-        value: row.compra,
-        source: "dolarapi",
-        meta: { casa: row.casa, leg: "compra" },
-      });
-    }
+  for (const ind of indicators) {
+    const cfg = ind.dolarapi;
+    if (!cfg) continue;
+    const row = byCasa[cfg.casa];
+    if (!row) continue;
+    const value = cfg.leg === "venta" ? row.venta : row.compra;
+    if (value == null) continue;
+    const ts = row.fechaActualizacion ? new Date(row.fechaActualizacion) : new Date();
+    out.push({
+      indicator: ind.id,
+      timestamp: startOfDayUtc(ts),
+      value,
+      source: "dolarapi",
+      meta: { casa: cfg.casa, leg: cfg.leg, fetched_at: new Date().toISOString() },
+    });
   }
   return out;
 }

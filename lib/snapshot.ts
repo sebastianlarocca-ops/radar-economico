@@ -1,24 +1,30 @@
-import { getIndicatorValuesCollection } from "./mongodb";
-import { fetchDolarApi } from "./sources/dolarapi";
-import { fetchCoinGecko } from "./sources/coingecko";
+import { bulkUpsertValues } from "./mongodb";
+import { fetchDolarApiCurrent } from "./sources/dolarapi";
+import { fetchCoinGeckoCurrent } from "./sources/coingecko";
+import { fetchArgentinaDatosCurrent } from "./sources/argentinadatos";
+import { fetchBcraCurrent } from "./sources/bcra";
+import { fetchFredCurrent } from "./sources/fred";
 import type { IndicatorValue } from "./types";
 
 export type SnapshotResult = {
   ok: boolean;
-  written: number;
+  upserted: number;
+  modified: number;
   bySource: Record<string, number>;
   errors: Array<{ source: string; message: string }>;
 };
 
 /**
- * Run every wired source, collect IndicatorValues, write to Mongo.
- * One failed source does not abort the others — we record the error and continue.
+ * Run every source's "current" fetcher, collect IndicatorValues, upsert to Mongo.
+ * One source failing does not abort the others.
  */
 export async function runSnapshot(): Promise<SnapshotResult> {
   const sources: Array<{ name: string; fn: () => Promise<IndicatorValue[]> }> = [
-    { name: "dolarapi", fn: fetchDolarApi },
-    { name: "coingecko", fn: fetchCoinGecko },
-    // Phase 2 v0.2 additions: argentinadatos, bcra, fred
+    { name: "dolarapi", fn: fetchDolarApiCurrent },
+    { name: "coingecko", fn: fetchCoinGeckoCurrent },
+    { name: "argentinadatos", fn: fetchArgentinaDatosCurrent },
+    { name: "bcra", fn: fetchBcraCurrent },
+    { name: "fred", fn: fetchFredCurrent },
   ];
 
   const errors: SnapshotResult["errors"] = [];
@@ -39,16 +45,12 @@ export async function runSnapshot(): Promise<SnapshotResult> {
     })
   );
 
-  let written = 0;
-  if (allValues.length > 0) {
-    const col = await getIndicatorValuesCollection();
-    const res = await col.insertMany(allValues, { ordered: false });
-    written = res.insertedCount;
-  }
+  const { upserted, modified } = await bulkUpsertValues(allValues);
 
   return {
     ok: errors.length === 0,
-    written,
+    upserted,
+    modified,
     bySource,
     errors,
   };

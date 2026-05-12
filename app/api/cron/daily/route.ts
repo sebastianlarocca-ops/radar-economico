@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runSnapshot } from "@/lib/snapshot";
 
-// Allow up to 60s — Mongo + multiple external fetches.
 export const maxDuration = 60;
-// Always run fresh, never cache.
 export const dynamic = "force-dynamic";
 
 function isAuthorized(req: NextRequest): boolean {
@@ -26,5 +24,4 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST mirrors GET, for manual curl invocations.
 export const POST = GET;
