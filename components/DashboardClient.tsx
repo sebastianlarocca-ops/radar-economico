@@ -473,20 +473,13 @@ export function DashboardClient({
       {/* CHINA */}
       <Section title="🇨🇳 China" chip={{ text: "FRED", tone: "live" }}>
         {(() => {
-          const cnTiles = byIds(latest, ["cn.cpi.yoy", "cn.ppi.yoy", "cn.fx.usdcny", "cn.pmi.caixin"]);
+          const cnTiles = byIds(latest, ["cn.cpi.yoy", "cn.fx.usdcny"]);
           const cnColors: Record<string, string> = {
             "cn.cpi.yoy":   COLORS.cnCpi,
-            "cn.ppi.yoy":   COLORS.cnPpi,
             "cn.fx.usdcny": COLORS.cnFx,
-            "cn.pmi.caixin": COLORS.cnPmi,
           };
           const cnFxData  = spark("cn.fx.usdcny");
           const cnCpiData = spark("cn.cpi.yoy");
-          const cnPpiData = spark("cn.ppi.yoy");
-          const cnPricesDatasets = [
-            { label: "CPI YoY", data: cnCpiData, color: COLORS.cnCpi },
-            { label: "PPI YoY", data: cnPpiData, color: COLORS.cnPpi },
-          ].filter(d => d.data.length >= 2);
 
           if (!cnTiles.some(r => r.value !== null)) {
             return (
@@ -507,9 +500,9 @@ export function DashboardClient({
                   <LineChart datasets={[{ label: "USD/CNY", data: cnFxData, color: COLORS.cnFx }]} />
                 </ChartBox>
               )}
-              {cnPricesDatasets.length >= 1 && (
-                <ChartBox title="CPI y PPI" hint="% interanual · dato mensual" infoKey="cn-prices">
-                  <LineChart datasets={cnPricesDatasets} />
+              {cnCpiData.length >= 2 && (
+                <ChartBox title="CPI YoY" hint="% interanual · dato mensual" infoKey="cn-prices">
+                  <LineChart datasets={[{ label: "CPI YoY", data: cnCpiData, color: COLORS.cnCpi }]} />
                 </ChartBox>
               )}
             </>
