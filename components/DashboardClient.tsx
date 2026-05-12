@@ -9,173 +9,172 @@ import { InfoTooltip } from "./InfoTooltip";
 import type { LatestRow } from "@/app/api/snapshots/latest/route";
 import type { HistoryResponse } from "@/app/api/snapshots/history/route";
 
-const COLORS = {
-  mayorista: "#1e3a8a",
-  oficial: "#2563eb",
-  tarjeta: "#9ca3af",
-  blue: "#16a34a",
-  mep: "#d97706",
-  ccl: "#dc2626",
-  cripto: "#7c3aed",
-  btc: "#f7931a",
-  eth: "#6b7fea",
-  riesgo: "#b91c1c",
-  ipc: "#be123c",
-  tasa: "#0891b2",
-  reservas: "#0f766e",
-  base: "#6d28d9",
-  fedFunds: "#1d4ed8",
-  ust10: "#7c3aed",
-  cpi: "#dc2626",
-  unrate: "#d97706",
-  nfp: "#16a34a",
-  dxy: "#0f172a",
-  cnCpi: "#b45309",
-  cnPpi: "#92400e",
-  cnFx: "#dc2626",
-  cnPmi: "#15803d",
-  euDfr: "#1d4ed8",
-  euBund: "#7c3aed",
-  euHicp: "#dc2626",
-  euEurusd: "#0f766e",
+// ── Colors ──────────────────────────────────────────────────────────────
+const C = {
+  blue:    "#5B9DFF",
+  green:   "#34D399",
+  red:     "#F87171",
+  orange:  "#FB923C",
+  violet:  "#A78BFA",
+  amber:   "#FBBF24",
 };
 
-// Stale threshold (days) per indicator — shown as amber badge on Tile
+const TILE_COLOR: Record<string, string> = {
+  "ar.dolar.oficial.venta":    C.blue,
+  "ar.dolar.oficial.compra":   C.blue,
+  "ar.dolar.mayorista.venta":  C.blue,
+  "ar.dolar.blue.venta":       C.green,
+  "ar.dolar.mep.venta":        C.orange,
+  "ar.dolar.ccl.venta":        C.red,
+  "ar.dolar.cripto.venta":     C.violet,
+  "ar.dolar.tarjeta.venta":    "#94A3B8",
+  "ar.riesgo_pais":            C.red,
+  "ar.ipc.mensual":            C.red,
+  "ar.bcra.tasa_politica":     C.blue,
+  "ar.bcra.reservas":          C.green,
+  "ar.bcra.base_monetaria":    C.violet,
+  "crypto.btc.usd":            C.orange,
+  "crypto.eth.usd":            C.violet,
+  "us.fed_funds.upper":        C.blue,
+  "us.ust.dgs10":              C.violet,
+  "us.cpi.yoy":                C.red,
+  "us.unrate":                 C.orange,
+  "us.payems":                 C.green,
+  "us.dxy_broad":              C.blue,
+  "cn.cpi.yoy":                C.red,
+  "cn.fx.usdcny":              C.blue,
+  "eu.ecb.dfr":                C.blue,
+  "eu.hicp.yoy":               C.red,
+  "eu.fx.eurusd":              C.green,
+  "eu.rates.bund10y":          C.violet,
+};
+
 const STALE_DAYS: Record<string, number> = {
-  "ar.dolar.oficial.venta":   2, "ar.dolar.oficial.compra":  2,
-  "ar.dolar.mayorista.venta": 2, "ar.dolar.blue.venta":      2,
-  "ar.dolar.mep.venta":       2, "ar.dolar.ccl.venta":       2,
-  "ar.dolar.cripto.venta":    2, "ar.dolar.tarjeta.venta":   2,
-  "ar.riesgo_pais":           2,
-  "ar.ipc.mensual":          45,
-  "ar.bcra.tasa_politica":    7, "ar.bcra.reservas":         7, "ar.bcra.base_monetaria": 7,
-  "crypto.btc.usd":           2, "crypto.eth.usd":           2,
-  "us.fed_funds.upper":       7, "us.ust.dgs10":             2,
-  "us.cpi.yoy":              45, "us.unrate":               45, "us.payems": 45,
-  "us.dxy_broad":             2,
-  "cn.cpi.yoy":              45, "cn.fx.usdcny":             2,
-  "eu.ecb.dfr":               7, "eu.hicp.yoy":             45,
-  "eu.fx.eurusd":             2, "eu.rates.bund10y":         2,
+  "ar.dolar.oficial.venta":    2,  "ar.dolar.oficial.compra":   2,
+  "ar.dolar.mayorista.venta":  2,  "ar.dolar.blue.venta":       2,
+  "ar.dolar.mep.venta":        2,  "ar.dolar.ccl.venta":        2,
+  "ar.dolar.cripto.venta":     2,  "ar.dolar.tarjeta.venta":    2,
+  "ar.riesgo_pais":            2,  "ar.ipc.mensual":           45,
+  "ar.bcra.tasa_politica":     7,  "ar.bcra.reservas":          7,
+  "ar.bcra.base_monetaria":    7,
+  "crypto.btc.usd":            2,  "crypto.eth.usd":            2,
+  "us.fed_funds.upper":        7,  "us.ust.dgs10":              2,
+  "us.cpi.yoy":               45,  "us.unrate":                45,  "us.payems": 45,
+  "us.dxy_broad":              2,
+  "cn.cpi.yoy":               45,  "cn.fx.usdcny":              2,
+  "eu.ecb.dfr":                7,  "eu.hicp.yoy":              45,
+  "eu.fx.eurusd":              2,  "eu.rates.bund10y":          2,
 };
 
-// Plain-language descriptions for each indicator
 const INFO: Record<string, string> = {
-  "ar.dolar.oficial.venta":     "Tipo de cambio oficial publicado por el BNA. Es el precio al que el banco vende dólares al público.",
-  "ar.dolar.oficial.compra":    "Precio al que el BNA compra dólares al público.",
-  "ar.dolar.mayorista.venta":   "Dólar de referencia para operaciones comerciales de gran volumen entre empresas y bancos.",
-  "ar.dolar.blue.venta":        "Precio en el mercado informal (paralelo). Refleja la demanda de dólares fuera del sistema bancario.",
-  "ar.dolar.mep.venta":         "Dólar 'Bolsa': se obtiene comprando un bono en pesos y vendiéndolo en dólares dentro del país. Legal.",
-  "ar.dolar.ccl.venta":         "Contado con liquidación: similar al MEP pero el bono se vende en el exterior. Referencia de convertibilidad real.",
-  "ar.dolar.cripto.venta":      "Precio del USDT en pesos. Funciona como referencia del dólar en el mercado cripto.",
-  "ar.dolar.tarjeta.venta":     "Dólar oficial más el impuesto PAIS (hasta 2024) y percepción de Ganancias. El que pagás con tarjeta en el exterior.",
-  "ar.riesgo_pais":             "EMBI+: mide cuánto más rinde un bono argentino vs un bono del Tesoro de EE.UU. Más puntos = mercado percibe más riesgo de default.",
-  "ar.ipc.mensual":             "Variación del Índice de Precios al Consumidor en un mes. Dato oficial del INDEC. Mide la inflación mensual.",
-  "ar.bcra.tasa_politica":      "Tasa overnight de pases entre entidades (O/N). Refleja el piso del corredor de tasas del BCRA desde la transición al esquema LEFI en jul-2025.",
-  "ar.bcra.reservas":           "Activos del BCRA en moneda extranjera. Clave para la estabilidad cambiaria y el pago de deuda externa. En millones de USD.",
-  "ar.bcra.base_monetaria":     "Total de pesos emitidos por el BCRA. Incluye billetes en circulación y depósitos bancarios en el BCRA.",
-  "crypto.btc.usd":             "Precio de mercado de Bitcoin en dólares. Activo digital descentralizado, oferta máxima de 21 millones.",
-  "crypto.eth.usd":             "Precio de mercado de Ethereum en dólares. Plataforma de contratos inteligentes y base del ecosistema DeFi.",
-  "us.fed_funds.upper":         "Tasa objetivo de la Reserva Federal (Fed). Afecta el costo del crédito en todo el mundo. Más alta = dólar más fuerte, presión sobre emergentes.",
-  "us.ust.dgs10":               "Rendimiento del bono del Tesoro de EE.UU. a 10 años. Referencia global del 'activo libre de riesgo'. Sube cuando el mercado espera más inflación o déficit.",
-  "us.cpi.yoy":                 "Inflación interanual de EE.UU. (variación de precios en los últimos 12 meses). Dato clave para las decisiones de la Fed.",
-  "us.unrate":                  "Porcentaje de la fuerza laboral sin empleo en EE.UU. Mercado laboral fuerte = Fed puede mantener tasas altas.",
-  "us.payems":                  "Nonfarm Payrolls: empleos creados fuera del sector agrícola. Principal termómetro mensual del mercado laboral de EE.UU.",
-  "us.dxy_broad":               "Índice del dólar frente a una canasta amplia de monedas. Sube cuando el dólar se fortalece globalmente.",
-  "cn.cpi.yoy":                 "Inflación interanual de China. Refleja presiones de demanda interna. El PBOC la monitorea para calibrar política monetaria.",
-  "cn.ppi.yoy":                 "Inflación mayorista en China. Indicador adelantado de presiones de costos que luego se trasladan al consumidor global.",
-  "cn.fx.usdcny":               "Yuan chino por dólar. Un CNY más débil (número mayor) abarata exportaciones chinas. El PBOC fija un tipo de referencia diario.",
-  "cn.pmi.caixin":              "PMI manufacturero de Caixin/S&P para China. Por encima de 50 = expansión. Refleja el pulso de la fábrica del mundo.",
-  // EU
-  "eu.ecb.dfr":                 "Tasa de facilidad de depósito del BCE. Tasa mínima a la que los bancos pueden depositar liquidez en el BCE overnight. Ancla la política monetaria de la eurozona.",
-  "eu.hicp.yoy":                "Inflación interanual de la eurozona medida por el HICP (Índice Armonizado de Precios al Consumidor). Dato oficial del Eurostat. Objetivo del BCE: 2%.",
-  "eu.fx.eurusd":               "Tipo de cambio euro / dólar. Publicado por el BCE como tasa de referencia diaria. Sube cuando el euro se aprecia frente al dólar.",
-  "eu.rates.bund10y":           "Rendimiento implícito a 10 años de la curva de bonos soberanos AAA de la eurozona (proxy del Bund alemán). Calculado por el BCE vía modelo de Nelson-Siegel-Svensson.",
-  // Derived
-  "derived.btc.ars":            "Bitcoin expresado en pesos argentinos. Se calcula multiplicando el precio de BTC en USD por el tipo de cambio USDT/ARS (dólar cripto).",
-  "derived.brecha.cripto_blue": "Diferencia porcentual entre el dólar cripto (USDT) y el dólar blue. Positivo = USDT cotiza por encima del blue.",
-  "derived.brecha.cripto_ccl":  "Diferencia porcentual entre el dólar cripto (USDT) y el CCL. Positivo = USDT cotiza por encima del CCL.",
+  "ar.dolar.oficial.venta":    "Tipo de cambio oficial publicado por el BNA. Es el precio al que el banco vende dólares al público.",
+  "ar.dolar.oficial.compra":   "Precio al que el BNA compra dólares al público.",
+  "ar.dolar.mayorista.venta":  "Dólar de referencia para operaciones comerciales de gran volumen entre empresas y bancos.",
+  "ar.dolar.blue.venta":       "Precio en el mercado informal (paralelo). Refleja la demanda de dólares fuera del sistema bancario.",
+  "ar.dolar.mep.venta":        "Dólar 'Bolsa': se obtiene comprando un bono en pesos y vendiéndolo en dólares dentro del país. Legal.",
+  "ar.dolar.ccl.venta":        "Contado con liquidación: similar al MEP pero el bono se vende en el exterior. Referencia de convertibilidad real.",
+  "ar.dolar.cripto.venta":     "Precio del USDT en pesos. Funciona como referencia del dólar en el mercado cripto.",
+  "ar.dolar.tarjeta.venta":    "Dólar oficial más impuestos. El que pagás con tarjeta en el exterior.",
+  "ar.riesgo_pais":            "EMBI+: mide cuánto más rinde un bono argentino vs un bono del Tesoro de EE.UU. Más puntos = más riesgo percibido.",
+  "ar.ipc.mensual":            "Variación del IPC en un mes. Dato oficial del INDEC. Mide la inflación mensual.",
+  "ar.bcra.tasa_politica":     "Tasa overnight de pases O/N. Refleja el piso del corredor de tasas del BCRA desde la transición al esquema LEFI.",
+  "ar.bcra.reservas":          "Activos del BCRA en moneda extranjera. Clave para la estabilidad cambiaria. En millones de USD.",
+  "ar.bcra.base_monetaria":    "Total de pesos emitidos por el BCRA. Incluye billetes en circulación y depósitos bancarios en el BCRA.",
+  "crypto.btc.usd":            "Precio de mercado de Bitcoin en dólares.",
+  "crypto.eth.usd":            "Precio de mercado de Ethereum en dólares.",
+  "us.fed_funds.upper":        "Tasa objetivo de la Reserva Federal. Afecta el costo del crédito en todo el mundo.",
+  "us.ust.dgs10":              "Rendimiento del bono del Tesoro de EE.UU. a 10 años. Referencia global del activo libre de riesgo.",
+  "us.cpi.yoy":                "Inflación interanual de EE.UU. Dato clave para las decisiones de la Fed.",
+  "us.unrate":                 "Porcentaje de la fuerza laboral sin empleo en EE.UU.",
+  "us.payems":                 "Nonfarm Payrolls: empleos creados fuera del sector agrícola.",
+  "us.dxy_broad":              "Índice del dólar frente a una canasta amplia de monedas.",
+  "cn.cpi.yoy":                "Inflación interanual de China. El PBOC la monitorea para calibrar política monetaria.",
+  "cn.fx.usdcny":              "Yuan chino por dólar. Un CNY más débil abarata exportaciones chinas.",
+  "eu.ecb.dfr":                "Tasa de facilidad de depósito del BCE. Ancla la política monetaria de la eurozona.",
+  "eu.hicp.yoy":               "Inflación interanual de la eurozona (HICP). Objetivo del BCE: 2%.",
+  "eu.fx.eurusd":              "Tipo de cambio euro/dólar. Tasa de referencia diaria del BCE.",
+  "eu.rates.bund10y":          "Rendimiento implícito a 10 años de la curva AAA de la eurozona (proxy del Bund alemán).",
+  "derived.btc.ars":           "Bitcoin expresado en pesos argentinos. BTC en USD × USDT/ARS.",
+  "derived.brecha.cripto_blue":"Diferencia porcentual entre el dólar cripto (USDT) y el dólar blue.",
+  "derived.brecha.cripto_ccl": "Diferencia porcentual entre el dólar cripto (USDT) y el CCL.",
 };
 
-// Chart-level descriptions
 const CHART_INFO: Record<string, string> = {
-  "dolar-evolucion":  "Muestra cómo evolucionó el precio de venta de cada tipo de dólar en el período seleccionado.",
-  "brecha":           "Diferencia porcentual de cada cotización vs el dólar oficial. Mide la distorsión del mercado cambiario.",
-  "riesgo":           "Evolución del EMBI+ Argentina. Cae cuando el mercado percibe menos riesgo de default.",
-  "ipc-chart":        "Inflación mensual registrada por el INDEC. Cada barra es un mes.",
-  "bcra-variables":   "Evolución de la tasa overnight de pases entre terceros (O/N). Proxy de la tasa de referencia desde la transición al esquema LEFI.",
-  "crypto-chart":     "Precio de BTC (eje izquierdo) y ETH (eje derecho) en dólares. Ejes separados por la diferencia de escala.",
-  "fed-rates":        "Evolución de la tasa Fed Funds y el rendimiento del bono del Tesoro a 10 años.",
-  "us-cpi":           "Inflación interanual de EE.UU. Dato mensual — se actualiza una vez al mes.",
-  "cn-fx":            "Evolución del tipo de cambio USD/CNY. Sube cuando el yuan se deprecia frente al dólar.",
-  "cn-prices":        "CPI e IPC mayorista (PPI) de China en variación interanual. Fuente: FRED (datos oficiales chinos vía OCDE).",
-  "eu-rates":         "Evolución de la tasa DFR del BCE y el rendimiento del bono AAA a 10 años de la eurozona.",
-  "eu-hicp":          "Inflación interanual de la eurozona (HICP). Dato mensual — se actualiza una vez al mes.",
-  "eu-eurusd":        "Evolución del tipo de cambio EUR/USD. Fuente: BCE (tasa de referencia diaria).",
+  "dolar-evolucion": "Cómo evolucionó el precio de venta de cada tipo de dólar en el período seleccionado.",
+  "brecha":          "Diferencia porcentual de cada cotización vs el dólar oficial.",
+  "riesgo":          "Evolución del EMBI+ Argentina. Cae cuando el mercado percibe menos riesgo.",
+  "ipc-chart":       "Inflación mensual registrada por el INDEC. Dato mensual.",
+  "bcra-variables":  "Evolución de la tasa overnight de pases O/N.",
+  "crypto-chart":    "BTC y ETH normalizados (base 100 al inicio del período).",
+  "fed-rates":       "Evolución de la tasa Fed Funds y el rendimiento del bono a 10 años.",
+  "us-cpi":          "Inflación interanual de EE.UU. Dato mensual.",
+  "cn-fx":           "Evolución del tipo de cambio USD/CNY.",
+  "cn-prices":       "CPI de China en variación interanual.",
+  "eu-rates":        "Evolución de la tasa DFR del BCE y el Bund 10Y.",
+  "eu-hicp":         "Inflación interanual de la eurozona (HICP). Dato mensual.",
+  "eu-eurusd":       "Evolución del tipo de cambio EUR/USD.",
 };
 
 type SeriesMap = Record<string, DataPoint[]>;
 
-function byId(rows: LatestRow[], id: string): LatestRow | undefined {
+function byId(rows: LatestRow[], id: string) {
   return rows.find((r) => r.id === id);
 }
-
-function byIds(rows: LatestRow[], ids: string[]): LatestRow[] {
+function byIds(rows: LatestRow[], ids: string[]) {
   const map = new Map(rows.map((r) => [r.id, r]));
   return ids.flatMap((id) => { const r = map.get(id); return r ? [r] : []; });
 }
-
-function filterRange(points: DataPoint[], rangeDays: RangeDays): DataPoint[] {
-  if (!points || points.length === 0) return [];
-  if (rangeDays === "max") return points;
-  const cutoff = new Date(Date.now() - rangeDays * 86400000).toISOString().slice(0, 10);
+function filterRange(points: DataPoint[], days: RangeDays): DataPoint[] {
+  if (!points?.length) return [];
+  if (days === "max") return points;
+  const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
   return points.filter((p) => p.t >= cutoff);
 }
-
-function brecha(oficial: number | null, other: number | null): string {
-  if (!oficial || !other) return "—";
-  const v = (other / oficial - 1) * 100;
+function pctDiff(a: number | null, b: number | null): string {
+  if (!a || !b) return "—";
+  const v = (a / b - 1) * 100;
   return (v >= 0 ? "+" : "") + v.toFixed(1) + "%";
 }
-
-function fmtARS(v: number | null, decimals = 0): string {
+function fmtARS(v: number | null, d = 0): string {
   if (v == null || !isFinite(v)) return "—";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency", currency: "ARS",
-    maximumFractionDigits: decimals, minimumFractionDigits: decimals,
-  }).format(v);
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: d, minimumFractionDigits: d }).format(v);
 }
-
 function fmtDate(ts: string | null): string {
   if (!ts) return "—";
   const dt = new Date(ts);
   if (isNaN(dt.getTime())) return "—";
   return dt.toLocaleString("es-AR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
+function brechaVal(a: number | null, b: number | null): number | null {
+  if (!a || !b) return null;
+  return +((a / b - 1) * 100).toFixed(1);
+}
 
-function ChartBox({
-  title,
+// ── ChartCard ────────────────────────────────────────────────────────────
+function ChartCard({
+  eyebrow,
   hint,
   infoKey,
   children,
   noData,
 }: {
-  title: string;
+  eyebrow: string;
   hint?: string;
   infoKey?: string;
   children: React.ReactNode;
   noData?: boolean;
 }) {
   return (
-    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 mt-3">
-      <div className="flex justify-between items-center mb-2">
-        <div className="flex items-center gap-1">
-          <span className="text-[12px] font-bold uppercase tracking-wider text-[var(--muted)]">{title}</span>
+    <div className="mp-card" style={{ padding: "20px 22px 18px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <span className="mp-eyebrow">{eyebrow}</span>
           {infoKey && CHART_INFO[infoKey] && <InfoTooltip text={CHART_INFO[infoKey]} />}
         </div>
-        {hint && <span className="text-[11px] text-[var(--muted)]">{hint}</span>}
+        {hint && <span className="kpi-sub">{hint}</span>}
       </div>
       {noData ? (
-        <div className="flex items-center justify-center h-[60px] text-[12px] text-[var(--muted)]">
+        <div style={{ height: 60, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--t-3)", fontSize: 12 }}>
           Acumulando historial · los datos aparecerán con el correr de los días
         </div>
       ) : children}
@@ -183,6 +182,167 @@ function ChartBox({
   );
 }
 
+// ── Ticker ────────────────────────────────────────────────────────────────
+function Ticker({ latest, history }: { latest: LatestRow[]; history: SeriesMap }) {
+  function delta(id: string): number | null {
+    const pts = history[id];
+    if (!pts || pts.length < 2) return null;
+    const a = pts[pts.length - 2].v;
+    const b = pts[pts.length - 1].v;
+    if (!a) return null;
+    return (b / a - 1) * 100;
+  }
+
+  const get = (id: string) => byId(latest, id)?.value ?? null;
+  const fmtV = (v: number | null, unit: string) => {
+    if (v == null) return "—";
+    if (unit === "ARS") return fmtARS(v);
+    if (unit === "USD") return "US$ " + Math.round(v).toLocaleString("en-US");
+    if (unit === "PCT") return v.toFixed(2) + "%";
+    if (unit === "BP") return Math.round(v).toLocaleString("en-US") + " bp";
+    return v.toFixed(3);
+  };
+
+  const items = [
+    { lbl: "OFICIAL",  val: fmtV(get("ar.dolar.oficial.venta"), "ARS"),  delta: delta("ar.dolar.oficial.venta") },
+    { lbl: "BLUE",     val: fmtV(get("ar.dolar.blue.venta"), "ARS"),     delta: delta("ar.dolar.blue.venta") },
+    { lbl: "CCL",      val: fmtV(get("ar.dolar.ccl.venta"), "ARS"),      delta: delta("ar.dolar.ccl.venta") },
+    { lbl: "MEP",      val: fmtV(get("ar.dolar.mep.venta"), "ARS"),      delta: delta("ar.dolar.mep.venta") },
+    { lbl: "EMBI+ AR", val: fmtV(get("ar.riesgo_pais"), "BP"),           delta: delta("ar.riesgo_pais") },
+    { lbl: "BTC/USD",  val: fmtV(get("crypto.btc.usd"), "USD"),          delta: delta("crypto.btc.usd") },
+    { lbl: "ETH/USD",  val: fmtV(get("crypto.eth.usd"), "USD"),          delta: delta("crypto.eth.usd") },
+    { lbl: "UST 10Y",  val: fmtV(get("us.ust.dgs10"), "PCT"),            delta: delta("us.ust.dgs10") },
+    { lbl: "FED FUNDS",val: fmtV(get("us.fed_funds.upper"), "PCT"),       delta: null },
+    { lbl: "DXY",      val: get("us.dxy_broad")?.toFixed(2) ?? "—",      delta: delta("us.dxy_broad") },
+    { lbl: "USD/CNY",  val: get("cn.fx.usdcny")?.toFixed(3) ?? "—",     delta: delta("cn.fx.usdcny") },
+    { lbl: "BUND 10Y", val: fmtV(get("eu.rates.bund10y"), "PCT"),        delta: delta("eu.rates.bund10y") },
+  ];
+  const all = [...items, ...items];
+
+  return (
+    <div className="ticker">
+      <div className="ticker-track">
+        {all.map((it, i) => (
+          <span key={i} className="ticker-item">
+            <span className="lbl">{it.lbl}</span>
+            <span className="val">{it.val}</span>
+            {it.delta != null && (
+              <span style={{ color: it.delta >= 0 ? "var(--green)" : "var(--red)", fontSize: 10.5 }}>
+                {it.delta >= 0 ? "▲" : "▼"} {Math.abs(it.delta).toFixed(2)}%
+              </span>
+            )}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Header ────────────────────────────────────────────────────────────────
+const REGIONS = [
+  { id: "ar", name: "Argentina", flag: "🇦🇷" },
+  { id: "us", name: "USA",       flag: "🇺🇸" },
+  { id: "eu", name: "Eurozona",  flag: "🇪🇺" },
+  { id: "cn", name: "China",     flag: "🇨🇳" },
+  { id: "cx", name: "Crypto",    flag: "◇" },
+];
+
+function Header({
+  range,
+  setRange,
+  active,
+  toggle,
+  lastUpdate,
+  latest,
+  history,
+}: {
+  range: RangeDays;
+  setRange: (v: RangeDays) => void;
+  active: Set<string>;
+  toggle: (id: string) => void;
+  lastUpdate: string | null;
+  latest: LatestRow[];
+  history: SeriesMap;
+}) {
+  return (
+    <header className="mp-header">
+      {/* Top bar */}
+      <div className="mp-container" style={{ display: "flex", alignItems: "center", gap: 20, height: 64 }}>
+        <div className="brand">
+          <span className="brand-mark">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M1 8 L3 5 L5 7 L7 3 L9 6 L11 4" stroke="#5B9DFF" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="11" cy="4" r="1.4" fill="#5B9DFF" />
+            </svg>
+          </span>
+          <span>
+            Macro Pulse{" "}
+            <span style={{ fontSize: 10, color: "var(--t-4)", letterSpacing: "0.06em", fontWeight: 400 }}>v0.3</span>
+          </span>
+        </div>
+
+        <nav style={{ display: "flex", gap: 4, marginLeft: 4 }}>
+          {["Dashboard", "Indicators", "Calendar", "Alerts"].map((n, i) => (
+            <button
+              key={n}
+              className="mp-chip"
+              style={i === 0 ? { color: "var(--t-1)", background: "rgba(255,255,255,0.04)", borderColor: "var(--line-2)" } : { background: "transparent", border: "1px solid transparent", color: "var(--t-3)" }}
+            >
+              {n}
+            </button>
+          ))}
+        </nav>
+
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+          <div className="mp-search">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ color: "var(--t-3)", flexShrink: 0 }}>
+              <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.4" />
+              <path d="M11 11 L14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+            <span>Buscar indicadores…</span>
+            <span className="kbd">⌘K</span>
+          </div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11.5, color: "var(--t-3)" }}>
+            <span className="live-dot" />
+            <span style={{ fontFamily: "var(--font-mono, monospace)" }}>
+              Live · {lastUpdate ? fmtDate(lastUpdate) : "—"}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Sub-bar: title + region chips + range */}
+      <div className="mp-container" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", paddingTop: 16, paddingBottom: 18, gap: 20, flexWrap: "wrap" }}>
+        <div>
+          <div className="mp-eyebrow" style={{ marginBottom: 8 }}>Macroeconomic Intelligence</div>
+          <div style={{ fontSize: 20, fontWeight: 500, letterSpacing: "-0.02em", color: "var(--t-1)" }}>
+            Global radar
+          </div>
+          <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            {REGIONS.map((r) => (
+              <button
+                key={r.id}
+                className={"mp-chip" + (active.has(r.id) ? " is-active" : "")}
+                onClick={() => toggle(r.id)}
+              >
+                <span style={{ fontSize: 13 }}>{r.flag}</span>
+                {r.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <RangeSelector value={range} onChange={setRange} />
+        </div>
+      </div>
+
+      <Ticker latest={latest} history={history} />
+    </header>
+  );
+}
+
+// ── Main DashboardClient ──────────────────────────────────────────────────
 export function DashboardClient({
   latest,
   initialHistory,
@@ -190,9 +350,21 @@ export function DashboardClient({
   latest: LatestRow[];
   initialHistory: SeriesMap;
 }) {
-  const [rangeDays, setRangeDays] = useState<RangeDays>(90);
+  const [range, setRange] = useState<RangeDays>(90);
   const [history, setHistory] = useState<SeriesMap>(initialHistory);
   const [loading, setLoading] = useState(false);
+  const [active, setActive] = useState(new Set(["ar", "us", "eu", "cn", "cx"]));
+
+  function toggle(id: string) {
+    setActive((prev) => {
+      const next = new Set(prev);
+      if (next.size === 1 && next.has(id)) {
+        return new Set(["ar", "us", "eu", "cn", "cx"]);
+      }
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next.size === 0 ? new Set([id]) : next;
+    });
+  }
 
   const fetchHistory = useCallback(async (days: RangeDays) => {
     const needed = days === "max" ? 3650 : days;
@@ -201,49 +373,34 @@ export function DashboardClient({
     if (oldest && oldest <= cutoff) return;
     setLoading(true);
     try {
-      const daysParam = days === "max" ? 3650 : days;
-      const res = await fetch(`/api/snapshots/history?days=${daysParam}`);
-      if (res.ok) {
-        const data = (await res.json()) as HistoryResponse;
-        setHistory(data.series);
-      }
-    } finally {
-      setLoading(false);
-    }
+      const res = await fetch(`/api/snapshots/history?days=${days === "max" ? 3650 : days}`);
+      if (res.ok) setHistory(((await res.json()) as HistoryResponse).series);
+    } finally { setLoading(false); }
   }, [history]);
 
-  useEffect(() => {
-    fetchHistory(rangeDays);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rangeDays]);
+  useEffect(() => { fetchHistory(range); }, [range]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // spark: returns range-filtered data, falls back to full available history if < 2 points
   const spark = (id: string): DataPoint[] => {
     const all = history[id] ?? [];
-    const filtered = filterRange(all, rangeDays);
+    const filtered = filterRange(all, range);
     return filtered.length >= 2 ? filtered : all.slice(-180);
   };
 
-  const sparkFiltered = (id: string): DataPoint[] => filterRange(history[id] ?? [], rangeDays);
-
+  // Latest values
   const oficialVenta = byId(latest, "ar.dolar.oficial.venta")?.value ?? null;
-  const cclVenta    = byId(latest, "ar.dolar.ccl.venta")?.value ?? null;
-  const blueVenta   = byId(latest, "ar.dolar.blue.venta")?.value ?? null;
-  const criptoRow   = byId(latest, "ar.dolar.cripto.venta");
-  const criptoVenta = criptoRow?.value ?? null;
-  const btcRow      = byId(latest, "crypto.btc.usd");
+  const cclVenta     = byId(latest, "ar.dolar.ccl.venta")?.value ?? null;
+  const blueVenta    = byId(latest, "ar.dolar.blue.venta")?.value ?? null;
+  const criptoRow    = byId(latest, "ar.dolar.cripto.venta");
+  const criptoVenta  = criptoRow?.value ?? null;
+  const btcRow       = byId(latest, "crypto.btc.usd");
+  const lastUpdate   = latest.map((r) => r.timestamp).filter((t): t is string => !!t).sort().pop() ?? null;
 
-  function brechaVal(a: number | null, b: number | null): number | null {
-    if (!a || !b) return null;
-    return +((a / b - 1) * 100).toFixed(1);
-  }
-
-  // Derived rows (computed client-side, not in DB)
-  const btcArsValue = btcRow?.value && criptoVenta ? Math.round(btcRow.value * criptoVenta) : null;
+  // Derived rows
   const btcArsRow: LatestRow = {
     id: "derived.btc.ars", label: "Bitcoin (ARS)",
     region: "GLOBAL", category: "crypto", unit: "ARS", decimals: 0,
-    value: btcArsValue, timestamp: btcRow?.timestamp ?? null, source: "derivado", meta: null,
+    value: btcRow?.value && criptoVenta ? Math.round(btcRow.value * criptoVenta) : null,
+    timestamp: btcRow?.timestamp ?? null, source: "derivado", meta: null,
   };
   const brechaBlueRow: LatestRow = {
     id: "derived.brecha.cripto_blue", label: "USDT vs Blue",
@@ -256,402 +413,353 @@ export function DashboardClient({
     value: brechaVal(criptoVenta, cclVenta), timestamp: criptoRow?.timestamp ?? null, source: "derivado", meta: null,
   };
 
-  const lastUpdate = latest.map((r) => r.timestamp).filter((t): t is string => !!t).sort().pop() ?? null;
-
-  // --- Tiles principales ---
-  const tilesPrincipales = byIds(latest, [
-    "ar.dolar.oficial.venta", "ar.dolar.ccl.venta", "ar.dolar.blue.venta",
-    "ar.riesgo_pais", "crypto.btc.usd", "crypto.eth.usd",
-  ]);
-
-  const tileColors: Record<string, string> = {
-    "ar.dolar.oficial.venta": COLORS.oficial,
-    "ar.dolar.ccl.venta": COLORS.ccl,
-    "ar.dolar.blue.venta": COLORS.blue,
-    "ar.riesgo_pais": COLORS.riesgo,
-    "crypto.btc.usd": COLORS.btc,
-    "crypto.eth.usd": COLORS.eth,
-  };
-
-  const tileSubs: Record<string, string> = {
-    "ar.dolar.ccl.venta": `brecha ${brecha(oficialVenta, cclVenta)}`,
-    "ar.dolar.blue.venta": `brecha ${brecha(oficialVenta, blueVenta)}`,
-  };
-
-  // --- Dolar table ---
-  const dolarTableRows = [
-    { id: "ar.dolar.mayorista.venta", label: "Mayorista (A3500)" },
-    { id: "ar.dolar.oficial.venta",   label: "Oficial (BNA)" },
-    { id: "ar.dolar.tarjeta.venta",   label: "Tarjeta" },
-    { id: "ar.dolar.blue.venta",      label: "Blue" },
-    { id: "ar.dolar.mep.venta",       label: "MEP" },
-    { id: "ar.dolar.ccl.venta",       label: "CCL" },
-    { id: "ar.dolar.cripto.venta",    label: "Cripto (USDT)" },
-  ];
-
-  // --- Dolar charts ---
-  const dolarChartDatasets = [
-    { label: "Mayorista", data: spark("ar.dolar.mayorista.venta"), color: COLORS.mayorista },
-    { label: "Oficial",   data: spark("ar.dolar.oficial.venta"),   color: COLORS.oficial },
-    { label: "Blue",      data: spark("ar.dolar.blue.venta"),      color: COLORS.blue },
-    { label: "MEP",       data: spark("ar.dolar.mep.venta"),       color: COLORS.mep },
-    { label: "CCL",       data: spark("ar.dolar.ccl.venta"),       color: COLORS.ccl },
-    { label: "Cripto",    data: spark("ar.dolar.cripto.venta"),    color: COLORS.cripto },
+  // Chart datasets
+  const dolarDatasets = [
+    { label: "Oficial",  data: spark("ar.dolar.oficial.venta"),   color: C.blue },
+    { label: "Blue",     data: spark("ar.dolar.blue.venta"),      color: C.green },
+    { label: "MEP",      data: spark("ar.dolar.mep.venta"),       color: C.orange },
+    { label: "CCL",      data: spark("ar.dolar.ccl.venta"),       color: C.red },
+    { label: "Cripto",   data: spark("ar.dolar.cripto.venta"),    color: C.violet },
   ].filter((d) => d.data.length >= 2);
 
-  const oficialSeries = spark("ar.dolar.oficial.venta");
-  const oficialByDate = new Map(oficialSeries.map((p) => [p.t, p.v]));
-  function brechaDataset(id: string, label: string, color: string) {
-    const data = spark(id).map((p) => {
-      const of = oficialByDate.get(p.t);
-      if (!of) return null;
-      return { t: p.t, v: +((p.v / of - 1) * 100).toFixed(2) };
-    }).filter((p): p is DataPoint => p !== null);
-    return { label, data, color };
-  }
+  const oficialByDate = new Map(spark("ar.dolar.oficial.venta").map((p) => [p.t, p.v]));
   const brechaDatasets = [
-    brechaDataset("ar.dolar.blue.venta",   "Blue",   COLORS.blue),
-    brechaDataset("ar.dolar.mep.venta",    "MEP",    COLORS.mep),
-    brechaDataset("ar.dolar.ccl.venta",    "CCL",    COLORS.ccl),
-    brechaDataset("ar.dolar.cripto.venta", "Cripto", COLORS.cripto),
-  ].filter((d) => d.data.length >= 2);
-
-  // --- Macro AR ---
-  const macroTiles = byIds(latest, ["ar.ipc.mensual", "ar.riesgo_pais"]);
-  const bcraTiles  = byIds(latest, ["ar.bcra.tasa_politica", "ar.bcra.reservas", "ar.bcra.base_monetaria"]);
-
-  // --- Crypto ---
-  const cryptoTiles = byIds(latest, ["crypto.btc.usd", "crypto.eth.usd"]);
-  const btcData = spark("crypto.btc.usd");
-  const ethData = spark("crypto.eth.usd");
-  const cryptoHasHistory = btcData.length >= 2 || ethData.length >= 2;
-  const cryptoDatasets = [
-    { label: "BTC/USD", data: btcData, color: COLORS.btc, yAxisID: "y" },
-    { label: "ETH/USD", data: ethData, color: COLORS.eth, yAxisID: "y1" },
-  ].filter((d) => d.data.length >= 2);
+    { label: "Blue",   data: spark("ar.dolar.blue.venta"),   color: C.green },
+    { label: "MEP",    data: spark("ar.dolar.mep.venta"),    color: C.orange },
+    { label: "CCL",    data: spark("ar.dolar.ccl.venta"),    color: C.red },
+    { label: "Cripto", data: spark("ar.dolar.cripto.venta"), color: C.violet },
+  ].map(({ label, data, color }) => ({
+    label, color,
+    data: data.flatMap((p) => {
+      const of = oficialByDate.get(p.t);
+      return of ? [{ t: p.t, v: +((p.v / of - 1) * 100).toFixed(2) }] : [];
+    }),
+  })).filter((d) => d.data.length >= 2);
 
   const btcArsSparkline = (() => {
     const criptoMap = new Map(spark("ar.dolar.cripto.venta").map((p) => [p.t, p.v]));
     return spark("crypto.btc.usd").flatMap((p) => {
-      const usdt = criptoMap.get(p.t);
-      return usdt ? [{ t: p.t, v: Math.round(p.v * usdt) }] : [];
+      const u = criptoMap.get(p.t);
+      return u ? [{ t: p.t, v: Math.round(p.v * u) }] : [];
     });
   })();
 
-  // --- USA ---
-  const usTiles = byIds(latest, [
-    "us.fed_funds.upper", "us.ust.dgs10", "us.cpi.yoy",
-    "us.unrate", "us.payems", "us.dxy_broad",
-  ]);
-  const usColors: Record<string, string> = {
-    "us.fed_funds.upper": COLORS.fedFunds,
-    "us.ust.dgs10":       COLORS.ust10,
-    "us.cpi.yoy":         COLORS.cpi,
-    "us.unrate":          COLORS.unrate,
-    "us.payems":          COLORS.nfp,
-    "us.dxy_broad":       COLORS.dxy,
-  };
   const usRatesDatasets = [
-    { label: "Fed Funds", data: spark("us.fed_funds.upper"), color: COLORS.fedFunds },
-    { label: "UST 10Y",   data: spark("us.ust.dgs10"),       color: COLORS.ust10 },
+    { label: "Fed Funds", data: spark("us.fed_funds.upper"), color: C.blue },
+    { label: "UST 10Y",   data: spark("us.ust.dgs10"),       color: C.violet },
   ].filter((d) => d.data.length >= 2);
-  const cpiData = spark("us.cpi.yoy");
+
+  const euRatesDatasets = [
+    { label: "ECB DFR",  data: spark("eu.ecb.dfr"),         color: C.blue },
+    { label: "Bund 10Y", data: spark("eu.rates.bund10y"),   color: C.violet },
+  ].filter((d) => d.data.length >= 2);
+
+  function norm(pts: DataPoint[]): DataPoint[] {
+    if (!pts.length) return pts;
+    const base = pts[0].v || 1;
+    return pts.map((p) => ({ t: p.t, v: (p.v / base) * 100 }));
+  }
+
+  const noEuData = !byIds(latest, ["eu.ecb.dfr","eu.hicp.yoy","eu.fx.eurusd","eu.rates.bund10y"]).some((r) => r.value != null);
+  const noCnData = !byIds(latest, ["cn.cpi.yoy","cn.fx.usdcny"]).some((r) => r.value != null);
+  const noUsData = !byIds(latest, ["us.fed_funds.upper","us.ust.dgs10","us.cpi.yoy","us.unrate","us.payems","us.dxy_broad"]).some((r) => r.value != null);
 
   return (
-    <main className="px-3.5 py-4 pb-10 max-w-screen-xl mx-auto">
-      <header className="mb-4">
-        <h1 className="text-[20px] font-semibold tracking-tight">Radar Económico</h1>
-        <div className="text-[12px] text-[var(--muted)] mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span>Argentina · USA · Eurozona · China</span>
-          <span>·</span>
-          <span>Última actualización: <span className="num">{lastUpdate ? fmtDate(lastUpdate) : "—"}</span></span>
-          {loading && <span className="text-[var(--warn)]">cargando...</span>}
-        </div>
-        <RangeSelector value={rangeDays} onChange={setRangeDays} />
-      </header>
+    <div>
+      <Header
+        range={range}
+        setRange={setRange}
+        active={active}
+        toggle={toggle}
+        lastUpdate={lastUpdate}
+        latest={latest}
+        history={history}
+      />
 
-      {/* TILES PRINCIPALES */}
-      <Section title="Tiles principales" chip={{ text: "en vivo", tone: "live" }}>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-          {tilesPrincipales.map((r) => (
-            <Tile
-              key={r.id} row={r}
-              sub={tileSubs[r.id]}
-              sparkline={spark(r.id)} sparkColor={tileColors[r.id]}
-              info={INFO[r.id]}
-              staleAfterDays={STALE_DAYS[r.id]}
-            />
-          ))}
-        </div>
-      </Section>
-
-      {/* AR · DÓLAR Y BRECHA */}
-      <Section title="🇦🇷 Argentina · Dólar y brecha" chip={{ text: "en vivo", tone: "live" }}>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden text-[13px]">
-            <thead>
-              <tr>
-                {["Cotización", "Venta", "Brecha vs oficial"].map((h, i) => (
-                  <th key={h} className={`px-2.5 py-2 text-[10.5px] uppercase tracking-wider font-bold text-[var(--muted)] bg-[var(--chip-bg)] border-b border-[var(--border)] ${i > 0 ? "text-right" : "text-left"}`}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {dolarTableRows.map(({ id, label }) => {
-                const row = byId(latest, id);
-                const venta = row?.value ?? null;
-                const br = id !== "ar.dolar.oficial.venta" && id !== "ar.dolar.mayorista.venta"
-                  ? brecha(oficialVenta, venta) : "—";
-                const brColor = br !== "—" && br.startsWith("+") ? "text-[var(--pos)]"
-                  : br !== "—" ? "text-[var(--neg)]" : "text-[var(--muted)]";
-                return (
-                  <tr key={id} className="border-b border-[var(--border)] last:border-0">
-                    <td className="px-2.5 py-2">
-                      <span className="flex items-center gap-1">
-                        {label}
-                        {INFO[id] && <InfoTooltip text={INFO[id]} />}
-                      </span>
-                    </td>
-                    <td className="px-2.5 py-2 text-right num">{fmtARS(venta)}</td>
-                    <td className={`px-2.5 py-2 text-right num font-medium ${brColor}`}>{br}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {dolarChartDatasets.length >= 1 && (
-          <ChartBox title="Evolución del dólar" hint="ARS por USD · venta" infoKey="dolar-evolucion">
-            <LineChart datasets={dolarChartDatasets} />
-          </ChartBox>
-        )}
-
-        {brechaDatasets.length >= 1 && (
-          <ChartBox title="Brecha cambiaria vs oficial" hint="% sobre oficial" infoKey="brecha">
-            <LineChart datasets={brechaDatasets} />
-          </ChartBox>
-        )}
-
-        {(brechaBlueRow.value !== null || brechaCclRow.value !== null) && (
-          <div className="mt-3">
-            <div className="text-[10.5px] uppercase tracking-wider font-bold text-[var(--muted)] mb-2">
-              Brecha cripto (USDT)
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              <Tile row={brechaBlueRow} info={INFO["derived.brecha.cripto_blue"]} />
-              <Tile row={brechaCclRow}  info={INFO["derived.brecha.cripto_ccl"]} />
-            </div>
+      <main className="mp-container" style={{ padding: "32px 28px 96px", position: "relative", zIndex: 1 }}>
+        {loading && (
+          <div style={{ position: "fixed", top: 70, right: 24, zIndex: 60, display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, color: "var(--t-3)" }}>
+            <span className="live-dot" style={{ background: "var(--amber)", animationDuration: "1s" }} />
+            Cargando historial…
           </div>
         )}
-      </Section>
 
-      {/* AR · MACRO */}
-      <Section title="🇦🇷 Argentina · Macro" chip={{ text: "en vivo", tone: "live" }}>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-          {macroTiles.map((r) => (
-            <Tile key={r.id} row={r}
-              sparkline={spark(r.id)}
-              sparkColor={r.id === "ar.riesgo_pais" ? COLORS.riesgo : COLORS.ipc}
-              info={INFO[r.id]}
-              staleAfterDays={STALE_DAYS[r.id]}
-            />
-          ))}
-        </div>
+        {/* ── Principal tiles ── */}
+        <Section eyebrow="Tiles Principales · Global" live right={<span className="kpi-sub">{lastUpdate ? fmtDate(lastUpdate) : "—"}</span>}>
+          <div className="row-grid grid-6 mp-reveal">
+            {byIds(latest, ["ar.dolar.oficial.venta","ar.dolar.ccl.venta","ar.dolar.blue.venta","ar.riesgo_pais","crypto.btc.usd","crypto.eth.usd"]).map((r) => (
+              <Tile
+                key={r.id} row={r}
+                sub={r.id === "ar.dolar.ccl.venta" ? `brecha ${pctDiff(cclVenta, oficialVenta)}`
+                   : r.id === "ar.dolar.blue.venta" ? `brecha ${pctDiff(blueVenta, oficialVenta)}`
+                   : undefined}
+                sparkline={spark(r.id)}
+                sparkColor={TILE_COLOR[r.id]}
+                glowColor={TILE_COLOR[r.id] + "2e"}
+                info={INFO[r.id]}
+                staleAfterDays={STALE_DAYS[r.id]}
+              />
+            ))}
+          </div>
+        </Section>
 
-        {spark("ar.riesgo_pais").length >= 2 && (
-          <ChartBox title="Riesgo país" hint="EMBI+ AR · puntos básicos" infoKey="riesgo">
-            <LineChart datasets={[{ label: "Riesgo país", data: spark("ar.riesgo_pais"), color: COLORS.riesgo }]} />
-          </ChartBox>
-        )}
-
-        {spark("ar.ipc.mensual").length >= 2 && (
-          <ChartBox title="Inflación mensual" hint="INDEC · % m/m" infoKey="ipc-chart">
-            <BarChart data={spark("ar.ipc.mensual")} color={COLORS.ipc} />
-          </ChartBox>
-        )}
-      </Section>
-
-      {/* AR · BCRA */}
-      <Section title="🇦🇷 Argentina · BCRA" chip={{ text: "en vivo", tone: "live" }}>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-          {bcraTiles.map((r) => {
-            const c = r.id === "ar.bcra.tasa_politica" ? COLORS.tasa
-              : r.id === "ar.bcra.reservas" ? COLORS.reservas : COLORS.base;
-            return <Tile key={r.id} row={r} sparkline={spark(r.id)} sparkColor={c} info={INFO[r.id]} staleAfterDays={STALE_DAYS[r.id]} />;
-          })}
-        </div>
-
-        <ChartBox
-          title="Tasa pases O/N"
-          hint="% · BCRA"
-          infoKey="bcra-variables"
-          noData={spark("ar.bcra.tasa_politica").length < 2}
-        >
-          <LineChart datasets={[{ label: "Tasa O/N", data: spark("ar.bcra.tasa_politica"), color: COLORS.tasa }]} />
-        </ChartBox>
-      </Section>
-
-      {/* CRIPTO */}
-      <Section title="₿ Cripto" chip={{ text: "en vivo", tone: "live" }}>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-          {cryptoTiles.map((r) => (
-            <Tile key={r.id} row={r}
-              sparkline={spark(r.id)}
-              sparkColor={r.id === "crypto.btc.usd" ? COLORS.btc : COLORS.eth}
-              info={INFO[r.id]}
-              staleAfterDays={STALE_DAYS[r.id]}
-            />
-          ))}
-          {btcArsRow.value !== null && (
-            <Tile row={btcArsRow}
-              sparkline={btcArsSparkline}
-              sparkColor={COLORS.btc}
-              info={INFO["derived.btc.ars"]}
-            />
-          )}
-        </div>
-
-        <ChartBox title="BTC y ETH" hint="USD · ejes separados" infoKey="crypto-chart" noData={!cryptoHasHistory}>
-          {cryptoDatasets.length >= 1 && <LineChart datasets={cryptoDatasets} yAxisLabel="BTC" yAxisLabelRight="ETH" />}
-        </ChartBox>
-      </Section>
-
-      {/* USA */}
-      <Section title="🇺🇸 USA" chip={{ text: "FRED", tone: "live" }}>
-        {usTiles.some((r) => r.value !== null) ? (
+        {/* ── Argentina ── */}
+        {active.has("ar") && (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-              {usTiles.map((r) => (
-                <Tile key={r.id} row={r}
-                  sparkline={spark(r.id)} sparkColor={usColors[r.id]}
-                  info={INFO[r.id]}
-                  staleAfterDays={STALE_DAYS[r.id]}
-                />
-              ))}
-            </div>
-
-            {usRatesDatasets.length >= 1 && (
-              <ChartBox title="Fed Funds y UST 10Y" hint="% anual" infoKey="fed-rates">
-                <LineChart datasets={usRatesDatasets} />
-              </ChartBox>
-            )}
-
-            <ChartBox
-              title="CPI YoY"
-              hint="% interanual · dato mensual"
-              infoKey="us-cpi"
-              noData={cpiData.length < 2}
-            >
-              <LineChart datasets={[{ label: "CPI YoY", data: cpiData, color: COLORS.cpi }]} />
-            </ChartBox>
-          </>
-        ) : (
-          <div className="bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-xl p-4 text-[13px] text-[var(--muted)]">
-            Sin datos todavía. Configurá <code className="bg-[var(--chip-bg)] px-1 rounded">FRED_API_KEY</code> y corré el backfill.
-          </div>
-        )}
-      </Section>
-
-      {/* EUROZONA */}
-      <Section title="🇪🇺 Eurozona" chip={{ text: "ECB SDW", tone: "live" }}>
-        {(() => {
-          const euTiles = byIds(latest, ["eu.ecb.dfr", "eu.hicp.yoy", "eu.fx.eurusd", "eu.rates.bund10y"]);
-          const euColors: Record<string, string> = {
-            "eu.ecb.dfr":       COLORS.euDfr,
-            "eu.hicp.yoy":      COLORS.euHicp,
-            "eu.fx.eurusd":     COLORS.euEurusd,
-            "eu.rates.bund10y": COLORS.euBund,
-          };
-          const euRatesDatasets = [
-            { label: "ECB DFR",   data: spark("eu.ecb.dfr"),       color: COLORS.euDfr  },
-            { label: "Bund 10Y",  data: spark("eu.rates.bund10y"), color: COLORS.euBund },
-          ].filter((d) => d.data.length >= 2);
-          const euHicpData   = spark("eu.hicp.yoy");
-          const euEurusdData = spark("eu.fx.eurusd");
-
-          if (!euTiles.some((r) => r.value !== null)) {
-            return (
-              <div className="bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-xl p-4 text-[13px] text-[var(--muted)]">
-                Sin datos todavía. Corré el backfill: <code className="bg-[var(--chip-bg)] px-1 rounded">source=ecb</code>
+            {/* Dólar y brecha */}
+            <Section region="Argentina" flag="🇦🇷" eyebrow="Dólar y Brecha" live>
+              <div className="mp-card" style={{ overflow: "hidden" }}>
+                <table className="mp-table">
+                  <thead>
+                    <tr>
+                      <th>Cotización</th>
+                      <th className="num">Venta · ARS</th>
+                      <th className="num">Brecha vs Oficial</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { id: "ar.dolar.mayorista.venta", label: "Mayorista (A3500)" },
+                      { id: "ar.dolar.oficial.venta",   label: "Oficial (BNA)" },
+                      { id: "ar.dolar.tarjeta.venta",   label: "Tarjeta" },
+                      { id: "ar.dolar.blue.venta",      label: "Blue" },
+                      { id: "ar.dolar.mep.venta",       label: "MEP" },
+                      { id: "ar.dolar.ccl.venta",       label: "CCL" },
+                      { id: "ar.dolar.cripto.venta",    label: "Cripto (USDT)" },
+                    ].map(({ id, label }) => {
+                      const row = byId(latest, id);
+                      const v = row?.value ?? null;
+                      const showBrecha = id !== "ar.dolar.oficial.venta" && id !== "ar.dolar.mayorista.venta";
+                      const br = showBrecha ? pctDiff(v, oficialVenta) : "—";
+                      const brClass = br === "—" ? "delta-neu" : br.startsWith("+") ? "delta-up" : "delta-down";
+                      return (
+                        <tr key={id}>
+                          <td>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                              {label}
+                              {INFO[id] && <InfoTooltip text={INFO[id]} />}
+                            </span>
+                          </td>
+                          <td className="num">{fmtARS(v)}</td>
+                          <td className={`num ${brClass}`}>{br}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            );
-          }
-          return (
-            <>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                {euTiles.map((r) => (
-                  <Tile key={r.id} row={r}
-                    sparkline={spark(r.id)} sparkColor={euColors[r.id]}
-                    info={INFO[r.id]}
-                    staleAfterDays={STALE_DAYS[r.id]}
+            </Section>
+
+            {/* Evolución + Brecha charts */}
+            <section className="mp-section" style={{ paddingTop: 0 }}>
+              <div className="row-grid" style={{ gridTemplateColumns: "minmax(0,1.4fr) minmax(0,1fr)", gap: 16 }}>
+                {dolarDatasets.length >= 1 && (
+                  <ChartCard eyebrow="Evolución del Dólar" hint="ARS por USD · venta" infoKey="dolar-evolucion">
+                    <LineChart datasets={dolarDatasets} height={300} showLegend formatY={(v) => Math.round(v).toLocaleString("es-AR")} />
+                  </ChartCard>
+                )}
+                {brechaDatasets.length >= 1 && (
+                  <ChartCard eyebrow="Brecha Cambiaria vs Oficial" hint="% sobre oficial" infoKey="brecha">
+                    <LineChart datasets={brechaDatasets} height={280} showLegend formatY={(v) => v.toFixed(1)} unit="%" />
+                  </ChartCard>
+                )}
+              </div>
+            </section>
+
+            {/* Macro AR */}
+            <Section region="Argentina" flag="🇦🇷" eyebrow="Macro · BCRA" live>
+              <div className="row-grid grid-4">
+                {byIds(latest, ["ar.ipc.mensual","ar.riesgo_pais","ar.bcra.tasa_politica","ar.bcra.reservas","ar.bcra.base_monetaria"]).map((r) => (
+                  <Tile key={r.id} row={r} sparkline={spark(r.id)} sparkColor={TILE_COLOR[r.id]} glowColor={TILE_COLOR[r.id] + "1e"} info={INFO[r.id]} staleAfterDays={STALE_DAYS[r.id]} />
+                ))}
+              </div>
+            </Section>
+
+            {/* Riesgo País chart + Brecha cripto tiles */}
+            <section className="mp-section" style={{ paddingTop: 0 }}>
+              <div className="row-grid" style={{ gridTemplateColumns: "minmax(0,1.4fr) minmax(0,1fr)", gap: 16 }}>
+                <ChartCard eyebrow="Riesgo País" hint="EMBI+ AR · puntos básicos" infoKey="riesgo">
+                  <LineChart
+                    datasets={[{ label: "EMBI+ AR", data: spark("ar.riesgo_pais"), color: C.red }]}
+                    height={260}
+                    formatY={(v) => Math.round(v).toString()}
                   />
-                ))}
-              </div>
-              {euRatesDatasets.length >= 1 && (
-                <ChartBox title="DFR y Bund 10Y" hint="% anual" infoKey="eu-rates">
-                  <LineChart datasets={euRatesDatasets} />
-                </ChartBox>
-              )}
-              <ChartBox title="HICP YoY" hint="% interanual · dato mensual" infoKey="eu-hicp" noData={euHicpData.length < 2}>
-                <LineChart datasets={[{ label: "HICP YoY", data: euHicpData, color: COLORS.euHicp }]} />
-              </ChartBox>
-              {euEurusdData.length >= 2 && (
-                <ChartBox title="EUR/USD" hint="USD por euro · referencia BCE" infoKey="eu-eurusd">
-                  <LineChart datasets={[{ label: "EUR/USD", data: euEurusdData, color: COLORS.euEurusd }]} />
-                </ChartBox>
-              )}
-            </>
-          );
-        })()}
-      </Section>
+                </ChartCard>
 
-      {/* CHINA */}
-      <Section title="🇨🇳 China" chip={{ text: "FRED", tone: "live" }}>
-        {(() => {
-          const cnTiles = byIds(latest, ["cn.cpi.yoy", "cn.fx.usdcny"]);
-          const cnColors: Record<string, string> = {
-            "cn.cpi.yoy":   COLORS.cnCpi,
-            "cn.fx.usdcny": COLORS.cnFx,
-          };
-          const cnFxData  = spark("cn.fx.usdcny");
-          const cnCpiData = spark("cn.cpi.yoy");
-
-          if (!cnTiles.some(r => r.value !== null)) {
-            return (
-              <div className="bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-xl p-4 text-[13px] text-[var(--muted)]">
-                Sin datos todavía. Corré el backfill para <code className="bg-[var(--chip-bg)] px-1 rounded">source=fred</code>.
+                <div>
+                  <div className="mp-eyebrow" style={{ marginBottom: 12 }}>Brecha Cripto (USDT)</div>
+                  <div className="row-grid grid-2">
+                    {[brechaBlueRow, brechaCclRow].map((r) => (
+                      <Tile key={r.id} row={r} sparkline={undefined} sparkColor={C.violet} glowColor={C.violet + "18"} info={INFO[r.id]} />
+                    ))}
+                  </div>
+                  {spark("ar.bcra.tasa_politica").length >= 2 && (
+                    <div style={{ marginTop: 12 }}>
+                      <ChartCard eyebrow="Tasa Pases O/N" hint="% · BCRA" infoKey="bcra-variables">
+                        <LineChart datasets={[{ label: "Tasa O/N", data: spark("ar.bcra.tasa_politica"), color: C.blue }]} height={180} formatY={(v) => v.toFixed(1)} unit="%" />
+                      </ChartCard>
+                    </div>
+                  )}
+                </div>
               </div>
-            );
-          }
-          return (
-            <>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                {cnTiles.map(r => (
-                  <Tile key={r.id} row={r} sparkline={spark(r.id)} sparkColor={cnColors[r.id]} info={INFO[r.id]} staleAfterDays={STALE_DAYS[r.id]} />
-                ))}
-              </div>
-              {cnFxData.length >= 2 && (
-                <ChartBox title="USD/CNY" hint="CNY por dólar" infoKey="cn-fx">
-                  <LineChart datasets={[{ label: "USD/CNY", data: cnFxData, color: COLORS.cnFx }]} />
-                </ChartBox>
-              )}
-              {cnCpiData.length >= 2 && (
-                <ChartBox title="CPI YoY" hint="% interanual · dato mensual" infoKey="cn-prices">
-                  <LineChart datasets={[{ label: "CPI YoY", data: cnCpiData, color: COLORS.cnCpi }]} />
-                </ChartBox>
-              )}
-            </>
-          );
-        })()}
-      </Section>
+            </section>
 
-      <footer className="mt-8 pt-4 border-t border-[var(--border)] text-center text-[11px] text-[var(--muted)] leading-relaxed">
-        Radar Económico v0.3 — Next.js + MongoDB · DolarAPI · ArgentinaDatos · CoinGecko · BCRA · FRED · ECB SDW<br />
-        Cron diario 10:00 UTC · datos desde {rangeDays === "max" ? "siempre" : `últimos ${rangeDays}d`}
-      </footer>
-    </main>
+            {/* IPC chart */}
+            {spark("ar.ipc.mensual").length >= 2 && (
+              <section className="mp-section" style={{ paddingTop: 0 }}>
+                <ChartCard eyebrow="Inflación Mensual" hint="INDEC · % m/m" infoKey="ipc-chart">
+                  <BarChart data={spark("ar.ipc.mensual")} color={C.red} height={200} />
+                </ChartCard>
+              </section>
+            )}
+          </>
+        )}
+
+        {/* ── USA ── */}
+        {active.has("us") && (
+          <Section region="USA" flag="🇺🇸" eyebrow="Fed · Real Economy · FX" live>
+            {noUsData ? (
+              <div className="mp-card" style={{ padding: "20px", color: "var(--t-3)", fontSize: 13 }}>
+                Sin datos todavía. Configurá <code style={{ background: "rgba(255,255,255,0.06)", padding: "1px 6px", borderRadius: 4 }}>FRED_API_KEY</code> y corré el backfill.
+              </div>
+            ) : (
+              <>
+                <div className="row-grid grid-6" style={{ marginBottom: 12 }}>
+                  {byIds(latest, ["us.fed_funds.upper","us.ust.dgs10","us.cpi.yoy","us.unrate","us.payems","us.dxy_broad"]).map((r) => (
+                    <Tile key={r.id} row={r} sparkline={spark(r.id)} sparkColor={TILE_COLOR[r.id]} glowColor={TILE_COLOR[r.id] + "1a"} info={INFO[r.id]} staleAfterDays={STALE_DAYS[r.id]} />
+                  ))}
+                </div>
+                {usRatesDatasets.length >= 1 && (
+                  <ChartCard eyebrow="Fed Funds vs UST 10Y" hint="% anual" infoKey="fed-rates">
+                    <LineChart datasets={usRatesDatasets} height={240} showLegend formatY={(v) => v.toFixed(2)} unit="%" />
+                  </ChartCard>
+                )}
+                {spark("us.cpi.yoy").length >= 2 && (
+                  <div style={{ marginTop: 12 }}>
+                    <ChartCard eyebrow="CPI YoY" hint="% interanual · dato mensual" infoKey="us-cpi">
+                      <LineChart datasets={[{ label: "CPI YoY", data: spark("us.cpi.yoy"), color: C.red }]} height={200} formatY={(v) => v.toFixed(2)} unit="%" />
+                    </ChartCard>
+                  </div>
+                )}
+              </>
+            )}
+          </Section>
+        )}
+
+        {/* ── Eurozona ── */}
+        {active.has("eu") && (
+          <Section
+            region="Eurozona" flag="🇪🇺" eyebrow="ECB · Bunds · Inflación"
+            right={
+              <span className="pill" style={{ color: "var(--amber)", borderColor: "rgba(251,191,36,0.25)", background: "rgba(251,191,36,0.06)" }}>
+                v0.3 · Beta
+              </span>
+            }
+          >
+            {noEuData ? (
+              <div className="mp-card" style={{ padding: "20px", color: "var(--t-3)", fontSize: 13 }}>
+                Sin datos todavía. Corré el backfill: <code style={{ background: "rgba(255,255,255,0.06)", padding: "1px 6px", borderRadius: 4 }}>source=ecb</code>
+              </div>
+            ) : (
+              <>
+                <div className="row-grid grid-4" style={{ marginBottom: 12 }}>
+                  {byIds(latest, ["eu.ecb.dfr","eu.rates.bund10y","eu.hicp.yoy","eu.fx.eurusd"]).map((r) => (
+                    <Tile key={r.id} row={r} sparkline={spark(r.id)} sparkColor={TILE_COLOR[r.id]} glowColor={TILE_COLOR[r.id] + "1a"} info={INFO[r.id]} staleAfterDays={STALE_DAYS[r.id]} />
+                  ))}
+                </div>
+                {euRatesDatasets.length >= 1 && (
+                  <ChartCard eyebrow="DFR y Bund 10Y" hint="% anual" infoKey="eu-rates">
+                    <LineChart datasets={euRatesDatasets} height={240} showLegend formatY={(v) => v.toFixed(2)} unit="%" />
+                  </ChartCard>
+                )}
+                {spark("eu.hicp.yoy").length >= 2 && (
+                  <div style={{ marginTop: 12 }}>
+                    <ChartCard eyebrow="HICP YoY" hint="% interanual · dato mensual" infoKey="eu-hicp">
+                      <LineChart datasets={[{ label: "HICP YoY", data: spark("eu.hicp.yoy"), color: C.red }]} height={200} formatY={(v) => v.toFixed(2)} unit="%" />
+                    </ChartCard>
+                  </div>
+                )}
+                {spark("eu.fx.eurusd").length >= 2 && (
+                  <div style={{ marginTop: 12 }}>
+                    <ChartCard eyebrow="EUR/USD" hint="USD por euro · referencia BCE" infoKey="eu-eurusd">
+                      <LineChart datasets={[{ label: "EUR/USD", data: spark("eu.fx.eurusd"), color: C.green }]} height={200} formatY={(v) => v.toFixed(4)} />
+                    </ChartCard>
+                  </div>
+                )}
+              </>
+            )}
+          </Section>
+        )}
+
+        {/* ── China ── */}
+        {active.has("cn") && (
+          <Section region="China" flag="🇨🇳" eyebrow="Inflación · FX">
+            {noCnData ? (
+              <div className="mp-card" style={{ padding: "20px", color: "var(--t-3)", fontSize: 13 }}>
+                Sin datos todavía. Corré el backfill para <code style={{ background: "rgba(255,255,255,0.06)", padding: "1px 6px", borderRadius: 4 }}>source=fred</code>.
+              </div>
+            ) : (
+              <>
+                <div className="row-grid grid-4" style={{ marginBottom: 12 }}>
+                  {byIds(latest, ["cn.cpi.yoy","cn.fx.usdcny"]).map((r) => (
+                    <Tile key={r.id} row={r} sparkline={spark(r.id)} sparkColor={TILE_COLOR[r.id]} glowColor={TILE_COLOR[r.id] + "1a"} info={INFO[r.id]} staleAfterDays={STALE_DAYS[r.id]} />
+                  ))}
+                  <div className="mp-card" style={{ padding: "14px 16px", display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 138, gridColumn: "span 2" }}>
+                    <div className="kpi-label">PPI · PMI Caixin</div>
+                    <div style={{ marginTop: 10, fontSize: 13, color: "var(--t-2)", lineHeight: 1.5 }}>
+                      Series no disponibles en FRED. Migración a fuente alternativa
+                      <span style={{ color: "var(--t-3)" }}> (NBS / Stooq)</span> en backlog v0.4.
+                    </div>
+                    <div className="kpi-sub" style={{ marginTop: 8, color: "var(--amber)" }}>⚠ Pendiente</div>
+                  </div>
+                </div>
+                {spark("cn.fx.usdcny").length >= 2 && (
+                  <ChartCard eyebrow="USD/CNY" hint="CNY por dólar" infoKey="cn-fx">
+                    <LineChart datasets={[{ label: "USD/CNY", data: spark("cn.fx.usdcny"), color: C.blue }]} height={200} formatY={(v) => v.toFixed(3)} />
+                  </ChartCard>
+                )}
+              </>
+            )}
+          </Section>
+        )}
+
+        {/* ── Crypto ── */}
+        {active.has("cx") && (
+          <Section region="Crypto" eyebrow="BTC · ETH · Stables" live>
+            <div className="row-grid grid-4" style={{ marginBottom: 12 }}>
+              {byIds(latest, ["crypto.btc.usd","crypto.eth.usd"]).map((r) => (
+                <Tile key={r.id} row={r} sparkline={spark(r.id)} sparkColor={TILE_COLOR[r.id]} glowColor={TILE_COLOR[r.id] + "2e"} info={INFO[r.id]} staleAfterDays={STALE_DAYS[r.id]} />
+              ))}
+              {btcArsRow.value != null && (
+                <Tile row={btcArsRow} sparkline={btcArsSparkline} sparkColor={C.orange} glowColor={C.orange + "20"} info={INFO["derived.btc.ars"]} />
+              )}
+            </div>
+            {(spark("crypto.btc.usd").length >= 2 || spark("crypto.eth.usd").length >= 2) && (
+              <ChartCard eyebrow="BTC vs ETH" hint="USD · normalizado base 100" infoKey="crypto-chart">
+                <LineChart
+                  datasets={[
+                    { label: "BTC", data: norm(spark("crypto.btc.usd")), color: C.orange },
+                    { label: "ETH", data: norm(spark("crypto.eth.usd")), color: C.violet },
+                  ].filter((d) => d.data.length >= 2)}
+                  height={260}
+                  showLegend
+                  formatY={(v) => v.toFixed(1)}
+                />
+              </ChartCard>
+            )}
+          </Section>
+        )}
+
+        {/* Footer */}
+        <footer style={{ marginTop: 64, paddingTop: 20, borderTop: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+          <div className="kpi-sub">
+            Macro Pulse · DolarAPI · ArgentinaDatos · BCRA · CoinGecko · FRED · ECB SDW
+          </div>
+          <div className="kpi-sub">
+            © 2026 · cron 10:00 UTC · last sync {lastUpdate ? fmtDate(lastUpdate) : "—"}
+          </div>
+        </footer>
+      </main>
+    </div>
   );
 }

@@ -1,25 +1,46 @@
 export function Section({
+  eyebrow,
+  region,
+  flag,
+  live,
+  right,
+  children,
+  // legacy compat
   title,
   chip,
-  children,
 }: {
-  title: string;
-  chip?: { text: string; tone?: "live" | "pending" };
+  eyebrow?: string;
+  region?: string;
+  flag?: string;
+  live?: boolean;
+  right?: React.ReactNode;
   children: React.ReactNode;
+  title?: string;
+  chip?: { text: string; tone?: "live" | "pending" };
 }) {
-  const chipColor = chip?.tone === "pending"
-    ? "bg-amber-100 text-amber-800"
-    : "bg-emerald-100 text-emerald-800";
+  const showEyebrow = eyebrow ?? title;
+  const showLive = live ?? chip?.tone === "live";
+
   return (
-    <section className="mt-6">
-      <h2 className="text-[13px] font-bold uppercase tracking-wider text-[var(--muted)] mb-2.5 flex items-center gap-2">
-        <span>{title}</span>
-        {chip && (
-          <span className={`inline-block px-2 py-0.5 rounded-full text-[10.5px] font-semibold ${chipColor}`}>
-            {chip.text}
-          </span>
-        )}
-      </h2>
+    <section className="mp-section">
+      <div className="mp-section-head">
+        <div className="mp-section-head-left">
+          {region && (
+            <div className="mp-region">
+              {flag && <span style={{ fontSize: 14 }}>{flag}</span>}
+              <span>{region}</span>
+            </div>
+          )}
+          {showEyebrow && <span className="mp-eyebrow">{showEyebrow}</span>}
+          {showLive && (
+            <span className="pill pill-live">
+              <span className="live-dot" />
+              En vivo
+            </span>
+          )}
+        </div>
+        {right}
+      </div>
       {children}
     </section>
   );
