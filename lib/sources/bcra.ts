@@ -2,7 +2,7 @@ import type { IndicatorValue } from "../types";
 import { indicatorsBySource } from "../indicators";
 import { startOfDayUtc, isoDate } from "../dates";
 
-const BASE = "https://api.bcra.gob.ar/estadisticas/v3.0";
+const BASE = "https://api.bcra.gob.ar/estadisticas/v4.0";
 
 // Note: BCRA's public API uses a self-signed cert in some chains. Node's fetch
 // usually accepts it on Vercel; if needed we'd add an HTTPS agent. For now we trust it.
