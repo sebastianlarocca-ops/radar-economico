@@ -7,8 +7,16 @@ const BASE = "https://api.bcra.gob.ar/estadisticas/v4.0";
 // Note: BCRA's public API uses a self-signed cert in some chains. Node's fetch
 // usually accepts it on Vercel; if needed we'd add an HTTPS agent. For now we trust it.
 
-type IndexRow = { idVariable: number; descripcion: string; categoria: string; fecha: string; valor: number };
-type HistoryResponse = { results: Array<{ fecha: string; valor: number }> };
+type IndexRow = {
+  idVariable: number;
+  descripcion: string;
+  categoria: string;
+  ultFechaInformada: string;
+  ultValorInformado: number;
+};
+type HistoryResponse = {
+  results: Array<{ idVariable: number; detalle: Array<{ fecha: string; valor: number }> }>;
+};
 
 /**
  * Fetches the current "Principales Variables" index, finds each registered
@@ -28,11 +36,11 @@ export async function fetchBcraCurrent(): Promise<IndicatorValue[]> {
     for (const ind of indicators) {
       if (!ind.bcra) continue;
       const match = rows.find(row => ind.bcra!.pattern.test(row.descripcion || ""));
-      if (!match || match.valor == null || !match.fecha) continue;
+      if (!match || match.ultValorInformado == null || !match.ultFechaInformada) continue;
       out.push({
         indicator: ind.id,
-        timestamp: startOfDayUtc(match.fecha),
-        value: match.valor,
+        timestamp: startOfDayUtc(match.ultFechaInformada),
+        value: match.ultValorInformado,
         source: "bcra",
         meta: { idVariable: match.idVariable, descripcion: match.descripcion },
       });
@@ -87,9 +95,9 @@ export async function fetchBcraHistory(from: Date): Promise<IndicatorValue[]> {
         console.warn(`[bcra] history HTTP ${r.status} for ${ind.id}`);
         continue;
       }
-      const data = (await r.json()) as HistoryResponse | { results?: HistoryResponse["results"] };
-      const rows = (data as HistoryResponse).results ?? (data as { results?: HistoryResponse["results"] }).results ?? [];
-      for (const row of rows) {
+      const data = (await r.json()) as HistoryResponse;
+      const detalle = data.results?.[0]?.detalle ?? [];
+      for (const row of detalle) {
         if (!row.fecha || row.valor == null) continue;
         out.push({
           indicator: ind.id,
