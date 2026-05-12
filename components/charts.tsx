@@ -132,8 +132,13 @@ export function LineChart({
   const [w, setW] = useState(800);
   const [hover, setHover] = useState<{ idx: number } | null>(null);
   const [hoverKey, setHoverKey] = useState<string | null>(null);
-  const [lockedKey, setLockedKey] = useState<string | null>(null);
-  const highlight = lockedKey ?? hoverKey;
+  const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set());
+  const toggleHidden = (key: string) =>
+    setHiddenKeys((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
   const cid = useId().replace(/:/g, "");
 
   useEffect(() => {
@@ -211,7 +216,7 @@ export function LineChart({
   };
 
   const hoverX = hover != null ? xOf(hover.idx) : 0;
-  const primaryDs = (highlight ? datasets.find((d) => (d.key ?? d.label) === highlight) : null) ?? datasets[0];
+  const primaryDs = (hoverKey ? datasets.find((d) => (d.key ?? d.label) === hoverKey && !hiddenKeys.has(hoverKey)) : null) ?? datasets.find((d) => !hiddenKeys.has(d.key ?? d.label)) ?? datasets[0];
 
   return (
     <div>
@@ -258,9 +263,9 @@ export function LineChart({
             ) : null
           )}
 
-          {/* Area under highlighted series */}
-          {highlight && (() => {
-            const ds = datasets.find((d) => (d.key ?? d.label) === highlight);
+          {/* Area under hovered series */}
+          {hoverKey && (() => {
+            const ds = datasets.find((d) => (d.key ?? d.label) === hoverKey && !hiddenKeys.has(hoverKey));
             if (!ds || ds.data.length < 2) return null;
             const d = pathFor(ds.data, ds.data.length);
             const n = ds.data.length;
@@ -271,17 +276,18 @@ export function LineChart({
           {/* Series lines */}
           {datasets.map((ds) => {
             const key = ds.key ?? ds.label;
-            const muted = highlight != null && key !== highlight;
+            const hidden = hiddenKeys.has(key);
+            const dimmed = hoverKey != null && key !== hoverKey && !hidden;
             const d = pathFor(ds.data, ds.data.length);
-            if (!d) return null;
+            if (!d || hidden) return null;
             return (
               <path
                 key={key}
                 d={d}
                 fill="none"
                 stroke={ds.color}
-                strokeOpacity={muted ? 0.18 : 1}
-                strokeWidth={muted ? 1.1 : 1.55}
+                strokeOpacity={dimmed ? 0.18 : 1}
+                strokeWidth={dimmed ? 1.1 : 1.55}
                 strokeLinejoin="round"
                 strokeLinecap="round"
                 clipPath={`url(#${cid}cp)`}
@@ -301,9 +307,8 @@ export function LineChart({
               />
               {datasets.map((ds) => {
                 const key = ds.key ?? ds.label;
-                const muted = highlight != null && key !== highlight;
                 const pt = ds.data[hover.idx];
-                if (muted || !pt) return null;
+                if (hiddenKeys.has(key) || !pt) return null;
                 const n = ds.data.length;
                 return (
                   <circle
@@ -336,7 +341,7 @@ export function LineChart({
             </div>
             {datasets.map((ds) => {
               const pt = ds.data[hover.idx];
-              if (!pt) return null;
+              if (!pt || hiddenKeys.has(ds.key ?? ds.label)) return null;
               return (
                 <div key={ds.key ?? ds.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, padding: "2px 0", fontSize: 11.5 }}>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 7, color: "var(--t-2)" }}>
@@ -361,10 +366,10 @@ export function LineChart({
             return (
               <span
                 key={key}
-                className={"legend-pill" + (highlight && highlight !== key ? " muted" : "") + (lockedKey === key ? " locked" : "")}
+                className={"legend-pill" + (hiddenKeys.has(key) ? " muted" : "") + (hoverKey === key ? " locked" : "")}
                 onMouseEnter={() => setHoverKey(key)}
                 onMouseLeave={() => setHoverKey(null)}
-                onClick={() => setLockedKey((prev) => (prev === key ? null : key))}
+                onClick={() => toggleHidden(key)}
               >
                 <span className="swatch" style={{ background: ds.color }} />
                 {ds.label}
