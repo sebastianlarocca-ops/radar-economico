@@ -314,11 +314,7 @@ function Header({
       {/* Sub-bar: title + region chips + range */}
       <div className="mp-container" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", paddingTop: 16, paddingBottom: 18, gap: 20, flexWrap: "wrap" }}>
         <div>
-          <div className="mp-eyebrow" style={{ marginBottom: 8 }}>Macroeconomic Intelligence</div>
-          <div style={{ fontSize: 20, fontWeight: 500, letterSpacing: "-0.02em", color: "var(--t-1)" }}>
-            Global radar
-          </div>
-          <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
             {REGIONS.map((r) => (
               <button
                 key={r.id}
