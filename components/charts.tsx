@@ -131,7 +131,9 @@ export function LineChart({
   const wrapRef = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(800);
   const [hover, setHover] = useState<{ idx: number } | null>(null);
-  const [highlight, setHighlight] = useState<string | null>(null);
+  const [hoverKey, setHoverKey] = useState<string | null>(null);
+  const [lockedKey, setLockedKey] = useState<string | null>(null);
+  const highlight = lockedKey ?? hoverKey;
   const cid = useId().replace(/:/g, "");
 
   useEffect(() => {
@@ -359,9 +361,10 @@ export function LineChart({
             return (
               <span
                 key={key}
-                className={"legend-pill" + (highlight && highlight !== key ? " muted" : "")}
-                onMouseEnter={() => setHighlight(key)}
-                onMouseLeave={() => setHighlight(null)}
+                className={"legend-pill" + (highlight && highlight !== key ? " muted" : "") + (lockedKey === key ? " locked" : "")}
+                onMouseEnter={() => setHoverKey(key)}
+                onMouseLeave={() => setHoverKey(null)}
+                onClick={() => setLockedKey((prev) => (prev === key ? null : key))}
               >
                 <span className="swatch" style={{ background: ds.color }} />
                 {ds.label}
