@@ -30,6 +30,10 @@ const COLORS = {
   unrate: "#d97706",
   nfp: "#16a34a",
   dxy: "#0f172a",
+  cnCpi: "#b45309",
+  cnPpi: "#92400e",
+  cnFx: "#dc2626",
+  cnPmi: "#15803d",
 };
 
 // Plain-language descriptions for each indicator
@@ -55,6 +59,10 @@ const INFO: Record<string, string> = {
   "us.unrate":                  "Porcentaje de la fuerza laboral sin empleo en EE.UU. Mercado laboral fuerte = Fed puede mantener tasas altas.",
   "us.payems":                  "Nonfarm Payrolls: empleos creados fuera del sector agrícola. Principal termómetro mensual del mercado laboral de EE.UU.",
   "us.dxy_broad":               "Índice del dólar frente a una canasta amplia de monedas. Sube cuando el dólar se fortalece globalmente.",
+  "cn.cpi.yoy":                 "Inflación interanual de China. Refleja presiones de demanda interna. El PBOC la monitorea para calibrar política monetaria.",
+  "cn.ppi.yoy":                 "Inflación mayorista en China. Indicador adelantado de presiones de costos que luego se trasladan al consumidor global.",
+  "cn.fx.usdcny":               "Yuan chino por dólar. Un CNY más débil (número mayor) abarata exportaciones chinas. El PBOC fija un tipo de referencia diario.",
+  "cn.pmi.caixin":              "PMI manufacturero de Caixin/S&P para China. Por encima de 50 = expansión. Refleja el pulso de la fábrica del mundo.",
 };
 
 // Chart-level descriptions
@@ -67,6 +75,8 @@ const CHART_INFO: Record<string, string> = {
   "crypto-chart":     "Precio de BTC (eje izquierdo) y ETH (eje derecho) en dólares. Ejes separados por la diferencia de escala.",
   "fed-rates":        "Evolución de la tasa Fed Funds y el rendimiento del bono del Tesoro a 10 años.",
   "us-cpi":           "Inflación interanual de EE.UU. Dato mensual — se actualiza una vez al mes.",
+  "cn-fx":            "Evolución del tipo de cambio USD/CNY. Sube cuando el yuan se deprecia frente al dólar.",
+  "cn-prices":        "CPI e IPC mayorista (PPI) de China en variación interanual. Fuente: FRED (datos oficiales chinos vía OCDE).",
 };
 
 type SeriesMap = Record<string, DataPoint[]>;
@@ -460,14 +470,55 @@ export function DashboardClient({
         </div>
       </Section>
 
-      <Section title="🇨🇳 China" chip={{ text: "v0.3", tone: "pending" }}>
-        <div className="bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-xl p-4 text-[13px] text-[var(--muted)]">
-          Llega en v0.3: LPR, CPI, PPI, USD/CNY, Caixin PMI (vía FRED + Stooq).
-        </div>
+      {/* CHINA */}
+      <Section title="🇨🇳 China" chip={{ text: "FRED", tone: "live" }}>
+        {(() => {
+          const cnTiles = byIds(latest, ["cn.cpi.yoy", "cn.ppi.yoy", "cn.fx.usdcny", "cn.pmi.caixin"]);
+          const cnColors: Record<string, string> = {
+            "cn.cpi.yoy":   COLORS.cnCpi,
+            "cn.ppi.yoy":   COLORS.cnPpi,
+            "cn.fx.usdcny": COLORS.cnFx,
+            "cn.pmi.caixin": COLORS.cnPmi,
+          };
+          const cnFxData  = spark("cn.fx.usdcny");
+          const cnCpiData = spark("cn.cpi.yoy");
+          const cnPpiData = spark("cn.ppi.yoy");
+          const cnPricesDatasets = [
+            { label: "CPI YoY", data: cnCpiData, color: COLORS.cnCpi },
+            { label: "PPI YoY", data: cnPpiData, color: COLORS.cnPpi },
+          ].filter(d => d.data.length >= 2);
+
+          if (!cnTiles.some(r => r.value !== null)) {
+            return (
+              <div className="bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-xl p-4 text-[13px] text-[var(--muted)]">
+                Sin datos todavía. Corré el backfill para <code className="bg-[var(--chip-bg)] px-1 rounded">source=fred</code>.
+              </div>
+            );
+          }
+          return (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {cnTiles.map(r => (
+                  <Tile key={r.id} row={r} sparkline={spark(r.id)} sparkColor={cnColors[r.id]} info={INFO[r.id]} />
+                ))}
+              </div>
+              {cnFxData.length >= 2 && (
+                <ChartBox title="USD/CNY" hint="CNY por dólar" infoKey="cn-fx">
+                  <LineChart datasets={[{ label: "USD/CNY", data: cnFxData, color: COLORS.cnFx }]} />
+                </ChartBox>
+              )}
+              {cnPricesDatasets.length >= 1 && (
+                <ChartBox title="CPI y PPI" hint="% interanual · dato mensual" infoKey="cn-prices">
+                  <LineChart datasets={cnPricesDatasets} />
+                </ChartBox>
+              )}
+            </>
+          );
+        })()}
       </Section>
 
       <footer className="mt-8 pt-4 border-t border-[var(--border)] text-center text-[11px] text-[var(--muted)] leading-relaxed">
-        Radar Económico v0.2 — Next.js + MongoDB · DolarAPI · ArgentinaDatos · CoinGecko · BCRA · FRED<br />
+        Radar Económico v0.3 — Next.js + MongoDB · DolarAPI · ArgentinaDatos · CoinGecko · BCRA · FRED<br />
         Cron diario 10:00 UTC · datos desde {rangeDays === "max" ? "siempre" : `últimos ${rangeDays}d`}
       </footer>
     </main>
