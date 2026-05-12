@@ -4,6 +4,27 @@ import { useRef, useEffect, useState, useId } from "react";
 
 export type DataPoint = { t: string; v: number };
 
+// Cardinal spline: smooth bezier through all points, tension 0–1
+function cardinalPath(pts: [number, number][], tension = 0.3): string {
+  if (pts.length < 2) return "";
+  if (pts.length === 2) {
+    return `M ${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)} L ${pts[1][0].toFixed(1)},${pts[1][1].toFixed(1)}`;
+  }
+  let d = `M ${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const cp1x = p1[0] + (p2[0] - p0[0]) * tension;
+    const cp1y = p1[1] + (p2[1] - p0[1]) * tension;
+    const cp2x = p2[0] - (p3[0] - p1[0]) * tension;
+    const cp2y = p2[1] - (p3[1] - p1[1]) * tension;
+    d += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+
 // ── Sparkline ──────────────────────────────────────────────────────────
 export function Sparkline({
   data,
@@ -36,12 +57,13 @@ export function Sparkline({
   const xStep = (w - pad * 2) / (vals.length - 1 || 1);
   const yRange = max - min || 1;
 
-  const pts = vals.map((v, i) => [
+  const pts: [number, number][] = vals.map((v, i) => [
     pad + i * xStep,
     height - pad - ((v - min) / yRange) * (height - pad * 2),
   ]);
-  const linePath = pts.map((p, i) => (i === 0 ? `M ${p[0]} ${p[1]}` : `L ${p[0]} ${p[1]}`)).join(" ");
-  const areaPath = `${linePath} L ${pts[pts.length - 1][0]} ${height} L ${pts[0][0]} ${height} Z`;
+  const linePath = cardinalPath(pts, 0.3);
+  const last = pts[pts.length - 1];
+  const areaPath = `${linePath} L ${last[0]} ${height} L ${pts[0][0]} ${height} Z`;
 
   return (
     <div ref={ref} style={{ width: "100%", height }}>
@@ -174,9 +196,8 @@ export function LineChart({
 
   function pathFor(data: DataPoint[], n: number): string {
     if (data.length < 2) return "";
-    return data
-      .map((p, i) => `${i === 0 ? "M" : "L"}${xOf(i, n).toFixed(1)},${yOf(p.v).toFixed(1)}`)
-      .join(" ");
+    const pts: [number, number][] = data.map((p, i) => [xOf(i, n), yOf(p.v)]);
+    return cardinalPath(pts, 0.3);
   }
 
   const onMove = (e: React.MouseEvent<SVGSVGElement>) => {
