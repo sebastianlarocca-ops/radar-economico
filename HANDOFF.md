@@ -25,7 +25,7 @@ editar en worktree → npm run build → commit → push → PR → merge → Ve
 
 Dashboard mobile-first de indicadores macro y financieros — Argentina (FX, riesgo país, IPC, BCRA), USA (FRED), China (FRED). Stack: Next.js 15 + TypeScript + Tailwind + MongoDB Atlas, desplegado en Vercel con cron diario.
 
-**Estado actual en una línea:** v0.3 casi completo — BCRA + CoinGecko + China + UX derivados + Eurozona (ECB SDW) en producción. Falta: correr backfill ECB en prod + health endpoint + cron_runs log.
+**Estado actual en una línea:** v0.3 parcialmente completo — BCRA fix + CoinGecko history + China (CPI/FX) + UX derivados (BTC/ARS, brechas USDT, stale badge) en producción. Falta: Eurozona (ECB SDW) + health endpoint + cron_runs log.
 
 ---
 
@@ -50,7 +50,6 @@ URL: `https://radar-economico-one.vercel.app`
 | #8 | CoinGecko: cap history a 365d (demo tier limit). |
 | #9/#10 | China: CPI YoY (CHNCPIALLMINMEI) + USD/CNY (DEXCHUS) vía FRED. PPI/PMI removidos (series inexistentes en FRED). |
 | #11 | UX derivados: tile BTC/ARS (client-side), tiles USDT vs Blue / USDT vs CCL, stale badge ámbar en Tile. |
-| #12 | Eurozona: fuente ECB SDW (ecb.ts), 4 indicadores (DFR, HICP, EUR/USD, Bund 10Y), sección dashboard. |
 
 ### Estado de los datos en MongoDB (al 2026-05-12)
 
@@ -211,10 +210,10 @@ curl -X POST "$URL/api/admin/backfill?source=coingecko&years=1"      -H "Authori
 
 ### Sprint v0.3 — pendiente
 
-**Cobertura geográfica:** ✅ parcial
-- ~~Eurozona básica~~ — en producción (PR #12): ECB DFR, HICP, EUR/USD, Bund 10Y AAA
-- Eurozona pendiente: BTP-Bund spread (necesita serie `IRS/M.IT.L.L40.CI.0.EUR.N.Z`), PMI/ZEW (fuentes comerciales, no en ECB SDW)
-- **⚠ Backfill pendiente en prod**: `curl -X POST "$URL/api/admin/backfill?source=ecb&years=5" -H "Authorization: Bearer $TOKEN"`
+**Cobertura geográfica:**
+- 🇪🇺 Eurozona: ECB DFR, HICP, Bund 10Y, BTP-Bund spread, PMI, ZEW
+  - Fuente: ECB SDW (SDMX REST)
+  - Crear `lib/sources/ecb.ts` + wire en snapshot/backfill
 
 **UX:** ✅ completado en PR #11
 - ~~BTC/ARS derivado~~ — en producción
