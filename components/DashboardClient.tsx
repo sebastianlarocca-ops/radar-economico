@@ -5,10 +5,10 @@ import { Tile } from "./Tile";
 import { Section } from "./Section";
 import { RangeSelector, type RangeDays } from "./RangeSelector";
 import { LineChart, BarChart, type DataPoint } from "./charts";
+import { InfoTooltip } from "./InfoTooltip";
 import type { LatestRow } from "@/app/api/snapshots/latest/route";
 import type { HistoryResponse } from "@/app/api/snapshots/history/route";
 
-// Color palette matching the HTML artifact
 const COLORS = {
   mayorista: "#1e3a8a",
   oficial: "#2563eb",
@@ -32,6 +32,43 @@ const COLORS = {
   dxy: "#0f172a",
 };
 
+// Plain-language descriptions for each indicator
+const INFO: Record<string, string> = {
+  "ar.dolar.oficial.venta":     "Tipo de cambio oficial publicado por el BNA. Es el precio al que el banco vende dólares al público.",
+  "ar.dolar.oficial.compra":    "Precio al que el BNA compra dólares al público.",
+  "ar.dolar.mayorista.venta":   "Dólar de referencia para operaciones comerciales de gran volumen entre empresas y bancos.",
+  "ar.dolar.blue.venta":        "Precio en el mercado informal (paralelo). Refleja la demanda de dólares fuera del sistema bancario.",
+  "ar.dolar.mep.venta":         "Dólar 'Bolsa': se obtiene comprando un bono en pesos y vendiéndolo en dólares dentro del país. Legal.",
+  "ar.dolar.ccl.venta":         "Contado con liquidación: similar al MEP pero el bono se vende en el exterior. Referencia de convertibilidad real.",
+  "ar.dolar.cripto.venta":      "Precio del USDT en pesos. Funciona como referencia del dólar en el mercado cripto.",
+  "ar.dolar.tarjeta.venta":     "Dólar oficial más el impuesto PAIS (hasta 2024) y percepción de Ganancias. El que pagás con tarjeta en el exterior.",
+  "ar.riesgo_pais":             "EMBI+: mide cuánto más rinde un bono argentino vs un bono del Tesoro de EE.UU. Más puntos = mercado percibe más riesgo de default.",
+  "ar.ipc.mensual":             "Variación del Índice de Precios al Consumidor en un mes. Dato oficial del INDEC. Mide la inflación mensual.",
+  "ar.bcra.tasa_politica":      "Tasa de referencia del BCRA para orientar el costo del dinero. Afecta tasas de plazos fijos, préstamos y pases.",
+  "ar.bcra.reservas":           "Activos del BCRA en moneda extranjera. Clave para la estabilidad cambiaria y el pago de deuda externa. En millones de USD.",
+  "ar.bcra.base_monetaria":     "Total de pesos emitidos por el BCRA. Incluye billetes en circulación y depósitos bancarios en el BCRA.",
+  "crypto.btc.usd":             "Precio de mercado de Bitcoin en dólares. Activo digital descentralizado, oferta máxima de 21 millones.",
+  "crypto.eth.usd":             "Precio de mercado de Ethereum en dólares. Plataforma de contratos inteligentes y base del ecosistema DeFi.",
+  "us.fed_funds.upper":         "Tasa objetivo de la Reserva Federal (Fed). Afecta el costo del crédito en todo el mundo. Más alta = dólar más fuerte, presión sobre emergentes.",
+  "us.ust.dgs10":               "Rendimiento del bono del Tesoro de EE.UU. a 10 años. Referencia global del 'activo libre de riesgo'. Sube cuando el mercado espera más inflación o déficit.",
+  "us.cpi.yoy":                 "Inflación interanual de EE.UU. (variación de precios en los últimos 12 meses). Dato clave para las decisiones de la Fed.",
+  "us.unrate":                  "Porcentaje de la fuerza laboral sin empleo en EE.UU. Mercado laboral fuerte = Fed puede mantener tasas altas.",
+  "us.payems":                  "Nonfarm Payrolls: empleos creados fuera del sector agrícola. Principal termómetro mensual del mercado laboral de EE.UU.",
+  "us.dxy_broad":               "Índice del dólar frente a una canasta amplia de monedas. Sube cuando el dólar se fortalece globalmente.",
+};
+
+// Chart-level descriptions
+const CHART_INFO: Record<string, string> = {
+  "dolar-evolucion":  "Muestra cómo evolucionó el precio de venta de cada tipo de dólar en el período seleccionado.",
+  "brecha":           "Diferencia porcentual de cada cotización vs el dólar oficial. Mide la distorsión del mercado cambiario.",
+  "riesgo":           "Evolución del EMBI+ Argentina. Cae cuando el mercado percibe menos riesgo de default.",
+  "ipc-chart":        "Inflación mensual registrada por el INDEC. Cada barra es un mes.",
+  "bcra-variables":   "Evolución de la tasa de política monetaria del BCRA en el período.",
+  "crypto-chart":     "Precio de BTC (eje izquierdo) y ETH (eje derecho) en dólares. Ejes separados por la diferencia de escala.",
+  "fed-rates":        "Evolución de la tasa Fed Funds y el rendimiento del bono del Tesoro a 10 años.",
+  "us-cpi":           "Inflación interanual de EE.UU. Dato mensual — se actualiza una vez al mes.",
+};
+
 type SeriesMap = Record<string, DataPoint[]>;
 
 function byId(rows: LatestRow[], id: string): LatestRow | undefined {
@@ -40,10 +77,7 @@ function byId(rows: LatestRow[], id: string): LatestRow | undefined {
 
 function byIds(rows: LatestRow[], ids: string[]): LatestRow[] {
   const map = new Map(rows.map((r) => [r.id, r]));
-  return ids.flatMap((id) => {
-    const r = map.get(id);
-    return r ? [r] : [];
-  });
+  return ids.flatMap((id) => { const r = map.get(id); return r ? [r] : []; });
 }
 
 function filterRange(points: DataPoint[], rangeDays: RangeDays): DataPoint[] {
@@ -74,6 +108,37 @@ function fmtDate(ts: string | null): string {
   return dt.toLocaleString("es-AR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
+function ChartBox({
+  title,
+  hint,
+  infoKey,
+  children,
+  noData,
+}: {
+  title: string;
+  hint?: string;
+  infoKey?: string;
+  children: React.ReactNode;
+  noData?: boolean;
+}) {
+  return (
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 mt-3">
+      <div className="flex justify-between items-center mb-2">
+        <div className="flex items-center gap-1">
+          <span className="text-[12px] font-bold uppercase tracking-wider text-[var(--muted)]">{title}</span>
+          {infoKey && CHART_INFO[infoKey] && <InfoTooltip text={CHART_INFO[infoKey]} />}
+        </div>
+        {hint && <span className="text-[11px] text-[var(--muted)]">{hint}</span>}
+      </div>
+      {noData ? (
+        <div className="flex items-center justify-center h-[60px] text-[12px] text-[var(--muted)]">
+          Acumulando historial · los datos aparecerán con el correr de los días
+        </div>
+      ) : children}
+    </div>
+  );
+}
+
 export function DashboardClient({
   latest,
   initialHistory,
@@ -89,7 +154,7 @@ export function DashboardClient({
     const needed = days === "max" ? 3650 : days;
     const oldest = Object.values(history).flat().map((p) => p.t).sort()[0];
     const cutoff = new Date(Date.now() - needed * 86400000).toISOString().slice(0, 10);
-    if (oldest && oldest <= cutoff) return; // we already have enough data
+    if (oldest && oldest <= cutoff) return;
     setLoading(true);
     try {
       const daysParam = days === "max" ? 3650 : days;
@@ -108,27 +173,25 @@ export function DashboardClient({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rangeDays]);
 
-  const spark = (id: string): DataPoint[] => filterRange(history[id] ?? [], rangeDays);
+  // spark: returns range-filtered data, falls back to full available history if < 2 points
+  const spark = (id: string): DataPoint[] => {
+    const all = history[id] ?? [];
+    const filtered = filterRange(all, rangeDays);
+    return filtered.length >= 2 ? filtered : all.slice(-180);
+  };
 
-  // Computed values
+  const sparkFiltered = (id: string): DataPoint[] => filterRange(history[id] ?? [], rangeDays);
+
   const oficialVenta = byId(latest, "ar.dolar.oficial.venta")?.value ?? null;
   const cclVenta = byId(latest, "ar.dolar.ccl.venta")?.value ?? null;
   const blueVenta = byId(latest, "ar.dolar.blue.venta")?.value ?? null;
 
-  const lastUpdate = latest
-    .map((r) => r.timestamp)
-    .filter((t): t is string => !!t)
-    .sort()
-    .pop() ?? null;
+  const lastUpdate = latest.map((r) => r.timestamp).filter((t): t is string => !!t).sort().pop() ?? null;
 
-  // --- Section: Tiles principales ---
+  // --- Tiles principales ---
   const tilesPrincipales = byIds(latest, [
-    "ar.dolar.oficial.venta",
-    "ar.dolar.ccl.venta",
-    "ar.dolar.blue.venta",
-    "ar.riesgo_pais",
-    "crypto.btc.usd",
-    "crypto.eth.usd",
+    "ar.dolar.oficial.venta", "ar.dolar.ccl.venta", "ar.dolar.blue.venta",
+    "ar.riesgo_pais", "crypto.btc.usd", "crypto.eth.usd",
   ]);
 
   const tileColors: Record<string, string> = {
@@ -145,74 +208,76 @@ export function DashboardClient({
     "ar.dolar.blue.venta": `brecha ${brecha(oficialVenta, blueVenta)}`,
   };
 
-  // --- Dolar table data ---
+  // --- Dolar table ---
   const dolarTableRows = [
-    { id: "ar.dolar.mayorista.venta", compraId: "ar.dolar.mayorista.venta", label: "Mayorista (A3500)" },
-    { id: "ar.dolar.oficial.venta", compraId: "ar.dolar.oficial.compra", label: "Oficial (BNA)" },
-    { id: "ar.dolar.tarjeta.venta", compraId: "ar.dolar.tarjeta.venta", label: "Tarjeta" },
-    { id: "ar.dolar.blue.venta", compraId: "ar.dolar.blue.venta", label: "Blue" },
-    { id: "ar.dolar.mep.venta", compraId: "ar.dolar.mep.venta", label: "MEP" },
-    { id: "ar.dolar.ccl.venta", compraId: "ar.dolar.ccl.venta", label: "CCL" },
-    { id: "ar.dolar.cripto.venta", compraId: "ar.dolar.cripto.venta", label: "Cripto (USDT)" },
+    { id: "ar.dolar.mayorista.venta", label: "Mayorista (A3500)" },
+    { id: "ar.dolar.oficial.venta",   label: "Oficial (BNA)" },
+    { id: "ar.dolar.tarjeta.venta",   label: "Tarjeta" },
+    { id: "ar.dolar.blue.venta",      label: "Blue" },
+    { id: "ar.dolar.mep.venta",       label: "MEP" },
+    { id: "ar.dolar.ccl.venta",       label: "CCL" },
+    { id: "ar.dolar.cripto.venta",    label: "Cripto (USDT)" },
   ];
 
-  // --- Dolar chart datasets (filtered by range) ---
+  // --- Dolar charts ---
   const dolarChartDatasets = [
     { label: "Mayorista", data: spark("ar.dolar.mayorista.venta"), color: COLORS.mayorista },
-    { label: "Oficial", data: spark("ar.dolar.oficial.venta"), color: COLORS.oficial },
-    { label: "Blue", data: spark("ar.dolar.blue.venta"), color: COLORS.blue },
-    { label: "MEP", data: spark("ar.dolar.mep.venta"), color: COLORS.mep },
-    { label: "CCL", data: spark("ar.dolar.ccl.venta"), color: COLORS.ccl },
-    { label: "Cripto", data: spark("ar.dolar.cripto.venta"), color: COLORS.cripto },
-  ].filter((d) => d.data.length > 0);
+    { label: "Oficial",   data: spark("ar.dolar.oficial.venta"),   color: COLORS.oficial },
+    { label: "Blue",      data: spark("ar.dolar.blue.venta"),      color: COLORS.blue },
+    { label: "MEP",       data: spark("ar.dolar.mep.venta"),       color: COLORS.mep },
+    { label: "CCL",       data: spark("ar.dolar.ccl.venta"),       color: COLORS.ccl },
+    { label: "Cripto",    data: spark("ar.dolar.cripto.venta"),    color: COLORS.cripto },
+  ].filter((d) => d.data.length >= 2);
 
-  // Brecha chart: compute % over oficial per day
-  const oficialSeries = filterRange(history["ar.dolar.oficial.venta"] ?? [], rangeDays);
+  const oficialSeries = spark("ar.dolar.oficial.venta");
   const oficialByDate = new Map(oficialSeries.map((p) => [p.t, p.v]));
   function brechaDataset(id: string, label: string, color: string) {
-    const series = filterRange(history[id] ?? [], rangeDays);
-    const data = series
-      .map((p) => {
-        const of = oficialByDate.get(p.t);
-        if (!of) return null;
-        return { t: p.t, v: +((p.v / of - 1) * 100).toFixed(2) };
-      })
-      .filter((p): p is DataPoint => p !== null);
+    const data = spark(id).map((p) => {
+      const of = oficialByDate.get(p.t);
+      if (!of) return null;
+      return { t: p.t, v: +((p.v / of - 1) * 100).toFixed(2) };
+    }).filter((p): p is DataPoint => p !== null);
     return { label, data, color };
   }
-
   const brechaDatasets = [
-    brechaDataset("ar.dolar.blue.venta", "Blue", COLORS.blue),
-    brechaDataset("ar.dolar.mep.venta", "MEP", COLORS.mep),
-    brechaDataset("ar.dolar.ccl.venta", "CCL", COLORS.ccl),
+    brechaDataset("ar.dolar.blue.venta",   "Blue",   COLORS.blue),
+    brechaDataset("ar.dolar.mep.venta",    "MEP",    COLORS.mep),
+    brechaDataset("ar.dolar.ccl.venta",    "CCL",    COLORS.ccl),
     brechaDataset("ar.dolar.cripto.venta", "Cripto", COLORS.cripto),
-  ].filter((d) => d.data.length > 0);
+  ].filter((d) => d.data.length >= 2);
 
   // --- Macro AR ---
   const macroTiles = byIds(latest, ["ar.ipc.mensual", "ar.riesgo_pais"]);
-  const bcraTiles = byIds(latest, ["ar.bcra.tasa_politica", "ar.bcra.reservas", "ar.bcra.base_monetaria"]);
+  const bcraTiles  = byIds(latest, ["ar.bcra.tasa_politica", "ar.bcra.reservas", "ar.bcra.base_monetaria"]);
 
   // --- Crypto ---
   const cryptoTiles = byIds(latest, ["crypto.btc.usd", "crypto.eth.usd"]);
+  const btcData = spark("crypto.btc.usd");
+  const ethData = spark("crypto.eth.usd");
+  const cryptoHasHistory = btcData.length >= 2 || ethData.length >= 2;
   const cryptoDatasets = [
-    { label: "BTC/USD", data: spark("crypto.btc.usd"), color: COLORS.btc, yAxisID: "y" },
-    { label: "ETH/USD", data: spark("crypto.eth.usd"), color: COLORS.eth, yAxisID: "y1" },
-  ].filter((d) => d.data.length > 0);
+    { label: "BTC/USD", data: btcData, color: COLORS.btc, yAxisID: "y" },
+    { label: "ETH/USD", data: ethData, color: COLORS.eth, yAxisID: "y1" },
+  ].filter((d) => d.data.length >= 2);
 
   // --- USA ---
   const usTiles = byIds(latest, [
-    "us.fed_funds.upper",
-    "us.ust.dgs10",
-    "us.cpi.yoy",
-    "us.unrate",
-    "us.payems",
-    "us.dxy_broad",
+    "us.fed_funds.upper", "us.ust.dgs10", "us.cpi.yoy",
+    "us.unrate", "us.payems", "us.dxy_broad",
   ]);
-
+  const usColors: Record<string, string> = {
+    "us.fed_funds.upper": COLORS.fedFunds,
+    "us.ust.dgs10":       COLORS.ust10,
+    "us.cpi.yoy":         COLORS.cpi,
+    "us.unrate":          COLORS.unrate,
+    "us.payems":          COLORS.nfp,
+    "us.dxy_broad":       COLORS.dxy,
+  };
   const usRatesDatasets = [
     { label: "Fed Funds", data: spark("us.fed_funds.upper"), color: COLORS.fedFunds },
-    { label: "UST 10Y", data: spark("us.ust.dgs10"), color: COLORS.ust10 },
-  ].filter((d) => d.data.length > 0);
+    { label: "UST 10Y",   data: spark("us.ust.dgs10"),       color: COLORS.ust10 },
+  ].filter((d) => d.data.length >= 2);
+  const cpiData = spark("us.cpi.yoy");
 
   return (
     <main className="px-3.5 py-4 pb-10 max-w-screen-xl mx-auto">
@@ -221,10 +286,7 @@ export function DashboardClient({
         <div className="text-[12px] text-[var(--muted)] mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
           <span>Argentina · USA · Eurozona · China</span>
           <span>·</span>
-          <span>
-            Última actualización:{" "}
-            <span className="num">{lastUpdate ? fmtDate(lastUpdate) : "—"}</span>
-          </span>
+          <span>Última actualización: <span className="num">{lastUpdate ? fmtDate(lastUpdate) : "—"}</span></span>
           {loading && <span className="text-[var(--warn)]">cargando...</span>}
         </div>
         <RangeSelector value={rangeDays} onChange={setRangeDays} />
@@ -235,11 +297,10 @@ export function DashboardClient({
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
           {tilesPrincipales.map((r) => (
             <Tile
-              key={r.id}
-              row={r}
+              key={r.id} row={r}
               sub={tileSubs[r.id]}
-              sparkline={spark(r.id)}
-              sparkColor={tileColors[r.id]}
+              sparkline={spark(r.id)} sparkColor={tileColors[r.id]}
+              info={INFO[r.id]}
             />
           ))}
         </div>
@@ -252,10 +313,7 @@ export function DashboardClient({
             <thead>
               <tr>
                 {["Cotización", "Venta", "Brecha vs oficial"].map((h, i) => (
-                  <th
-                    key={h}
-                    className={`px-2.5 py-2 text-[10.5px] uppercase tracking-wider font-bold text-[var(--muted)] bg-[var(--chip-bg)] border-b border-[var(--border)] ${i > 0 ? "text-right" : "text-left"}`}
-                  >
+                  <th key={h} className={`px-2.5 py-2 text-[10.5px] uppercase tracking-wider font-bold text-[var(--muted)] bg-[var(--chip-bg)] border-b border-[var(--border)] ${i > 0 ? "text-right" : "text-left"}`}>
                     {h}
                   </th>
                 ))}
@@ -266,16 +324,17 @@ export function DashboardClient({
                 const row = byId(latest, id);
                 const venta = row?.value ?? null;
                 const br = id !== "ar.dolar.oficial.venta" && id !== "ar.dolar.mayorista.venta"
-                  ? brecha(oficialVenta, venta)
-                  : "—";
-                const brColor = br !== "—" && br.startsWith("+")
-                  ? "text-[var(--pos)]"
-                  : br !== "—"
-                  ? "text-[var(--neg)]"
-                  : "text-[var(--muted)]";
+                  ? brecha(oficialVenta, venta) : "—";
+                const brColor = br !== "—" && br.startsWith("+") ? "text-[var(--pos)]"
+                  : br !== "—" ? "text-[var(--neg)]" : "text-[var(--muted)]";
                 return (
                   <tr key={id} className="border-b border-[var(--border)] last:border-0">
-                    <td className="px-2.5 py-2">{label}</td>
+                    <td className="px-2.5 py-2">
+                      <span className="flex items-center gap-1">
+                        {label}
+                        {INFO[id] && <InfoTooltip text={INFO[id]} />}
+                      </span>
+                    </td>
                     <td className="px-2.5 py-2 text-right num">{fmtARS(venta)}</td>
                     <td className={`px-2.5 py-2 text-right num font-medium ${brColor}`}>{br}</td>
                   </tr>
@@ -285,24 +344,16 @@ export function DashboardClient({
           </table>
         </div>
 
-        {dolarChartDatasets.length > 0 && (
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 mt-3">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[12px] font-bold uppercase tracking-wider text-[var(--muted)]">Evolución del dólar</span>
-              <span className="text-[11px] text-[var(--muted)]">ARS por USD · venta</span>
-            </div>
+        {dolarChartDatasets.length >= 1 && (
+          <ChartBox title="Evolución del dólar" hint="ARS por USD · venta" infoKey="dolar-evolucion">
             <LineChart datasets={dolarChartDatasets} />
-          </div>
+          </ChartBox>
         )}
 
-        {brechaDatasets.length > 0 && (
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 mt-3">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[12px] font-bold uppercase tracking-wider text-[var(--muted)]">Brecha cambiaria vs oficial</span>
-              <span className="text-[11px] text-[var(--muted)]">% sobre oficial</span>
-            </div>
+        {brechaDatasets.length >= 1 && (
+          <ChartBox title="Brecha cambiaria vs oficial" hint="% sobre oficial" infoKey="brecha">
             <LineChart datasets={brechaDatasets} />
-          </div>
+          </ChartBox>
         )}
       </Section>
 
@@ -310,35 +361,24 @@ export function DashboardClient({
       <Section title="🇦🇷 Argentina · Macro" chip={{ text: "en vivo", tone: "live" }}>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
           {macroTiles.map((r) => (
-            <Tile
-              key={r.id}
-              row={r}
+            <Tile key={r.id} row={r}
               sparkline={spark(r.id)}
               sparkColor={r.id === "ar.riesgo_pais" ? COLORS.riesgo : COLORS.ipc}
+              info={INFO[r.id]}
             />
           ))}
         </div>
 
-        {(history["ar.riesgo_pais"] ?? []).length > 0 && (
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 mt-3">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[12px] font-bold uppercase tracking-wider text-[var(--muted)]">Riesgo país</span>
-              <span className="text-[11px] text-[var(--muted)]">EMBI+ AR · puntos básicos</span>
-            </div>
-            <LineChart
-              datasets={[{ label: "Riesgo país", data: spark("ar.riesgo_pais"), color: COLORS.riesgo }]}
-            />
-          </div>
+        {spark("ar.riesgo_pais").length >= 2 && (
+          <ChartBox title="Riesgo país" hint="EMBI+ AR · puntos básicos" infoKey="riesgo">
+            <LineChart datasets={[{ label: "Riesgo país", data: spark("ar.riesgo_pais"), color: COLORS.riesgo }]} />
+          </ChartBox>
         )}
 
-        {(history["ar.ipc.mensual"] ?? []).length > 0 && (
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 mt-3">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[12px] font-bold uppercase tracking-wider text-[var(--muted)]">Inflación mensual</span>
-              <span className="text-[11px] text-[var(--muted)]">INDEC · % m/m</span>
-            </div>
+        {spark("ar.ipc.mensual").length >= 2 && (
+          <ChartBox title="Inflación mensual" hint="INDEC · % m/m" infoKey="ipc-chart">
             <BarChart data={spark("ar.ipc.mensual")} color={COLORS.ipc} />
-          </div>
+          </ChartBox>
         )}
       </Section>
 
@@ -347,51 +387,36 @@ export function DashboardClient({
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
           {bcraTiles.map((r) => {
             const c = r.id === "ar.bcra.tasa_politica" ? COLORS.tasa
-              : r.id === "ar.bcra.reservas" ? COLORS.reservas
-              : COLORS.base;
-            return <Tile key={r.id} row={r} sparkline={spark(r.id)} sparkColor={c} />;
+              : r.id === "ar.bcra.reservas" ? COLORS.reservas : COLORS.base;
+            return <Tile key={r.id} row={r} sparkline={spark(r.id)} sparkColor={c} info={INFO[r.id]} />;
           })}
         </div>
 
-        {["ar.bcra.tasa_politica", "ar.bcra.reservas", "ar.bcra.base_monetaria"].some(
-          (id) => (history[id] ?? []).length > 0
-        ) && (
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 mt-3">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[12px] font-bold uppercase tracking-wider text-[var(--muted)]">Variables BCRA</span>
-              <span className="text-[11px] text-[var(--muted)]">tasa en %</span>
-            </div>
-            <LineChart
-              datasets={[
-                { label: "Tasa política", data: spark("ar.bcra.tasa_politica"), color: COLORS.tasa },
-              ].filter((d) => d.data.length > 0)}
-            />
-          </div>
-        )}
+        <ChartBox
+          title="Tasa de política monetaria"
+          hint="% · BCRA"
+          infoKey="bcra-variables"
+          noData={spark("ar.bcra.tasa_politica").length < 2}
+        >
+          <LineChart datasets={[{ label: "Tasa política", data: spark("ar.bcra.tasa_politica"), color: COLORS.tasa }]} />
+        </ChartBox>
       </Section>
 
       {/* CRIPTO */}
       <Section title="₿ Cripto" chip={{ text: "en vivo", tone: "live" }}>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
           {cryptoTiles.map((r) => (
-            <Tile
-              key={r.id}
-              row={r}
+            <Tile key={r.id} row={r}
               sparkline={spark(r.id)}
               sparkColor={r.id === "crypto.btc.usd" ? COLORS.btc : COLORS.eth}
+              info={INFO[r.id]}
             />
           ))}
         </div>
 
-        {cryptoDatasets.length > 0 && (
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 mt-3">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[12px] font-bold uppercase tracking-wider text-[var(--muted)]">BTC y ETH</span>
-              <span className="text-[11px] text-[var(--muted)]">USD · ejes separados</span>
-            </div>
-            <LineChart datasets={cryptoDatasets} yAxisLabel="BTC" yAxisLabelRight="ETH" />
-          </div>
-        )}
+        <ChartBox title="BTC y ETH" hint="USD · ejes separados" infoKey="crypto-chart" noData={!cryptoHasHistory}>
+          {cryptoDatasets.length >= 1 && <LineChart datasets={cryptoDatasets} yAxisLabel="BTC" yAxisLabelRight="ETH" />}
+        </ChartBox>
       </Section>
 
       {/* USA */}
@@ -399,40 +424,28 @@ export function DashboardClient({
         {usTiles.some((r) => r.value !== null) ? (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-              {usTiles.map((r) => {
-                const colors: Record<string, string> = {
-                  "us.fed_funds.upper": COLORS.fedFunds,
-                  "us.ust.dgs10": COLORS.ust10,
-                  "us.cpi.yoy": COLORS.cpi,
-                  "us.unrate": COLORS.unrate,
-                  "us.payems": COLORS.nfp,
-                  "us.dxy_broad": COLORS.dxy,
-                };
-                return <Tile key={r.id} row={r} sparkline={spark(r.id)} sparkColor={colors[r.id]} />;
-              })}
+              {usTiles.map((r) => (
+                <Tile key={r.id} row={r}
+                  sparkline={spark(r.id)} sparkColor={usColors[r.id]}
+                  info={INFO[r.id]}
+                />
+              ))}
             </div>
 
-            {usRatesDatasets.length > 0 && (
-              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 mt-3">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[12px] font-bold uppercase tracking-wider text-[var(--muted)]">Fed Funds y UST 10Y</span>
-                  <span className="text-[11px] text-[var(--muted)]">% anual</span>
-                </div>
+            {usRatesDatasets.length >= 1 && (
+              <ChartBox title="Fed Funds y UST 10Y" hint="% anual" infoKey="fed-rates">
                 <LineChart datasets={usRatesDatasets} />
-              </div>
+              </ChartBox>
             )}
 
-            {(history["us.cpi.yoy"] ?? []).length > 0 && (
-              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 mt-3">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[12px] font-bold uppercase tracking-wider text-[var(--muted)]">CPI YoY</span>
-                  <span className="text-[11px] text-[var(--muted)]">% interanual</span>
-                </div>
-                <LineChart
-                  datasets={[{ label: "CPI YoY", data: spark("us.cpi.yoy"), color: COLORS.cpi }]}
-                />
-              </div>
-            )}
+            <ChartBox
+              title="CPI YoY"
+              hint="% interanual · dato mensual"
+              infoKey="us-cpi"
+              noData={cpiData.length < 2}
+            >
+              <LineChart datasets={[{ label: "CPI YoY", data: cpiData, color: COLORS.cpi }]} />
+            </ChartBox>
           </>
         ) : (
           <div className="bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-xl p-4 text-[13px] text-[var(--muted)]">
