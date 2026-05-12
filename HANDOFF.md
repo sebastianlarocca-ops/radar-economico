@@ -7,38 +7,58 @@
 
 ---
 
+## Workflow obligatorio para toda sesión
+
+**Cada cambio de código debe terminar en producción.** El flujo completo es:
+
+```
+editar en worktree → npm run build → commit → push → PR → merge → Vercel auto-deploya
+```
+
+- Nunca usar `vercel --prod` desde el repo local — siempre dejar que Vercel auto-deploye desde el merge a `main`.
+- Si por alguna razón el local está desactualizado antes de deployar: `git fetch origin && git reset --hard origin/main`.
+- Al final de cada sesión: actualizar este HANDOFF.md, commitear y mergear a main.
+
+---
+
 ## TL;DR
 
-Dashboard mobile-first de indicadores macro y financieros — Argentina (FX, riesgo país, IPC, BCRA), USA (FRED), Eurozona y China (en backlog). Stack: Next.js 15 + TypeScript + Tailwind + MongoDB Atlas, desplegado en Vercel con cron diario.
+Dashboard mobile-first de indicadores macro y financieros — Argentina (FX, riesgo país, IPC, BCRA), USA (FRED), China (FRED). Stack: Next.js 15 + TypeScript + Tailwind + MongoDB Atlas, desplegado en Vercel con cron diario.
 
-**Estado actual en una línea:** v0.2 está completamente vivo en producción — backend + frontend + charts + sparklines + range selector + tooltips informativos. No hay deuda técnica pendiente. El siguiente paso es v0.3 (Eurozona + China + mejoras UX).
+**Estado actual en una línea:** v0.3 parcialmente completo — BCRA fix + CoinGecko history + China (CPI/FX) en producción. Eurozona pendiente. El siguiente paso es continuar v0.3: Eurozona + UX derivados + health endpoint.
 
 ---
 
 ## Status snapshot
 
-### ✅ En producción (v0.2)
+### ✅ En producción (v0.3 parcial)
 
 URL: `https://radar-economico-one.vercel.app`
 
 - Next.js 15 desplegado en Vercel (free tier), auto-deploy desde `main`
-- MongoDB Atlas M0, colección `radar.indicator_values`, ~23.1k docs
+- MongoDB Atlas M0, colección `radar.indicator_values`, ~28k docs
 - **5 fuentes activas:** DolarAPI · ArgentinaDatos · BCRA · CoinGecko · FRED
-- **21 indicadores** registrados en `lib/indicators.ts`
-- Cron diario: `POST /api/cron/daily` a las 10:00 UTC — todas las fuentes, ~21 rows/día
-- Dashboard con: tiles + sparklines, range selector (30d/90d/1a/Máx), line charts, brecha chart, tooltips ⓘ en cada indicador y chart
+- **19 indicadores** registrados en `lib/indicators.ts`
+- Cron diario: `POST /api/cron/daily` a las 10:00 UTC — todas las fuentes
+- Dashboard con: tiles + sparklines, range selector (30d/90d/1a/Máx), line charts, brecha chart, tooltips ⓘ
+
+### Cambios de v0.3 ya en producción
+
+| PR | Cambio |
+|---|---|
+| #7 | BCRA: switch tasa política a variable 150 (pases O/N, ~20%). CoinGecko: agrega `x-cg-demo-api-key` header. |
+| #8 | CoinGecko: cap history a 365d (demo tier limit). |
+| #9/#10 | China: CPI YoY (CHNCPIALLMINMEI) + USD/CNY (DEXCHUS) vía FRED. PPI/PMI removidos (series inexistentes en FRED). |
 
 ### Estado de los datos en MongoDB (al 2026-05-12)
 
-| Fuente | Rows | Rango |
+| Fuente | Rows aprox. | Rango |
 |---|---|---|
-| argentinadatos | 15,599 | May 2021 – May 2026 |
-| fred | 4,501 | May 2021 – Mar 2026 |
-| bcra | 3,000 | May 2021 – May 2025 (*) |
+| argentinadatos | 15,600 | May 2021 – May 2026 |
+| fred | ~9,000 | May 2021 – May 2026 (US + CN) |
+| bcra | 3,000+ | May 2021 – May 2026 |
+| coingecko | 730 | May 2025 – May 2026 (1 año, demo tier limit) |
 | dolarapi | ~8/día | solo current (cron diario) |
-| coingecko | ~2/día | solo current — ver ⚠️ abajo |
-
-(*) El indicador `ar.bcra.tasa_politica` (var 160) dejó de actualizarse en la API del BCRA después de julio 2025. Ver sección "Problemas conocidos".
 
 ### Componentes del frontend
 
@@ -46,9 +66,9 @@ URL: `https://radar-economico-one.vercel.app`
 |---|---|
 | `components/charts.tsx` | Sparkline, LineChart (dual-axis), BarChart. Labels multi-año automáticos ("may '21"). |
 | `components/RangeSelector.tsx` | Botones 30d/90d/1a/Máx. Client component. |
-| `components/InfoTooltip.tsx` | Ícono ⓘ con tooltip hover/click. Descripción plain-language de cada indicador y chart. |
+| `components/InfoTooltip.tsx` | Ícono ⓘ con tooltip hover/click. |
 | `components/Tile.tsx` | Acepta `sparkline`, `sparkColor`, `info` props. |
-| `components/DashboardClient.tsx` | Client principal. Estado de rango, lazy-fetch de history, todas las secciones. |
+| `components/DashboardClient.tsx` | Client principal. Estado de rango, lazy-fetch de history, secciones AR/Crypto/US/CN. |
 | `components/Dashboard.tsx` | Server shell fino — solo pasa props a DashboardClient. |
 | `app/page.tsx` | Server fetch: latest + 365d history en paralelo desde Mongo. |
 
@@ -113,24 +133,21 @@ URL: `https://radar-economico-one.vercel.app`
 
 ## Problemas conocidos
 
-### 1. BCRA tasa política — dato desactualizado
+### 1. CoinGecko history — limitado a 365 días (demo tier)
 
-- **Variable:** `ar.bcra.tasa_politica` → idVariable 160 ("Tasas de interés de política monetaria")
-- **Síntoma:** el BCRA dejó de publicar datos en esa variable después de julio 2025. El tile muestra el último valor conocido (29%), el chart muestra el historial hasta jul-2025 como fallback.
-- **Causa probable:** el BCRA cambió su framework de política monetaria en 2025 y la variable 160 quedó discontinuada.
-- **Fix pendiente:** identificar el nuevo idVariable o serie BCRA que representa la tasa de referencia actual. Hacerlo: llamar `GET https://api.bcra.gob.ar/estadisticas/v4.0/Monetarias` y buscar variables con `ultFechaInformada` reciente relacionadas con tasa o pases. Actualizar el `pattern` en `lib/indicators.ts`.
+- **Síntoma:** `/market_chart` retorna 401 con `days > 365` en demo tier.
+- **Estado actual:** history capped a 365d. El chart BTC/ETH tiene 1 año de historial (mayo 2025–mayo 2026) y crece 1 punto/día via cron.
+- **Fix futuro:** Pro tier de CoinGecko para acceder a +365d, o aceptar el límite y dejar crecer orgánicamente.
 
-### 2. CoinGecko history — bloqueado desde IPs de Vercel
+### 2. China — PPI y PMI Caixin sin fuente en FRED
 
-- **Síntoma:** backfill de CoinGecko retorna 0 rows aunque el endpoint responde 200 localmente.
-- **Causa:** CoinGecko free tier restringe el endpoint `/coins/{id}/market_chart` desde IPs de servidores (Vercel, AWS, etc.).
-- **Estado actual:** crypto history se acumula 1 punto/día via cron. El chart BTC/ETH muestra "Acumulando historial" hasta tener ≥2 puntos.
-- **Fix pendiente:** conseguir una API key de CoinGecko (demo tier es gratis) y agregarla como `COINGECKO_API_KEY` en Vercel env vars. Actualizar `lib/sources/coingecko.ts` para incluir el header `x-cg-demo-api-key`. Re-correr backfill.
+- **Síntoma:** `PPICHO01CNM661N` y `CHNMFGPMI` no existen en FRED → retornan 400.
+- **Estado actual:** tiles removidos del dashboard. China muestra solo CPI YoY y USD/CNY.
+- **Fix pendiente:** encontrar fuente alternativa (NBS directo, Stooq, u otra) para PPI y PMI Caixin.
 
 ### 3. BCRA API — versión actual es v4.0
 
 - La API migró de v3.0 a v4.0 durante mayo 2026. `lib/sources/bcra.ts` ya usa v4.0.
-- Cambios de schema en v4: índice usa `ultFechaInformada`/`ultValorInformado` (antes `fecha`/`valor`); historia usa `results[0].detalle[]` (antes `results[]` flat).
 - Si el BCRA vuelve a migrar, buscar 400 con "Método deprecado" y actualizar `BASE` en `lib/sources/bcra.ts`.
 
 ---
@@ -161,6 +178,7 @@ Pattern: `<region>.<categoría>.<detalle>`
 - `ar.riesgo_pais`, `ar.ipc.mensual`
 - `ar.bcra.tasa_politica`, `ar.bcra.reservas`, `ar.bcra.base_monetaria`
 - `us.fed_funds.upper`, `us.ust.dgs10`, `us.cpi.yoy`, `us.unrate`, `us.payems`, `us.dxy_broad`
+- `cn.cpi.yoy`, `cn.fx.usdcny`
 - `crypto.btc.usd`, `crypto.eth.usd`
 
 ### Registro central de indicadores
@@ -171,7 +189,7 @@ Los módulos de `lib/sources/*` leen del registro vía `indicatorsBySource()`.
 
 ---
 
-## Backfill (ya corridos — referencia para refrescar)
+## Backfill (referencia)
 
 ```bash
 URL=https://radar-economico-one.vercel.app
@@ -182,25 +200,19 @@ curl -X POST "$URL/api/admin/backfill?source=argentinadatos&years=5" -H "Authori
 curl -X POST "$URL/api/admin/backfill?source=bcra&years=5"           -H "Authorization: Bearer $TOKEN"
 curl -X POST "$URL/api/admin/backfill?source=fred&years=5"           -H "Authorization: Bearer $TOKEN"
 curl -X POST "$URL/api/admin/backfill?source=coingecko&years=1"      -H "Authorization: Bearer $TOKEN"
-# (coingecko con years>1 retorna 0 desde Vercel — ver problema conocido #2)
+# (coingecko: demo tier limita a 365d máximo por request)
 ```
 
 ---
 
 ## Future backlog
 
-### Sprint v0.3 (próxima iteración)
+### Sprint v0.3 — pendiente
 
 **Cobertura geográfica:**
-- 🇪🇺 Eurozona: ECB DFR, HICP, Bund 10Y, BTP-Bund spread, HCOB PMI, ZEW, IFO
-  - Fuente: ECB SDW (SDMX REST) + Eurostat
-  - Crear `lib/sources/ecb.ts` + `lib/sources/eurostat.ts`
-- 🇨🇳 China: 1Y/5Y LPR, CPI YoY, PPI YoY, USD/CNY, USD/CNH, Caixin PMI
-  - FRED tiene mirrors de China (`CHNCPIALLMINMEI`, etc.) — reusar `lib/sources/fred.ts`
-
-**Fixes pendientes (ver sección "Problemas conocidos"):**
-- Encontrar variable BCRA vigente para tasa de política monetaria
-- Agregar `COINGECKO_API_KEY` (demo tier gratuito) para desbloquear history desde Vercel
+- 🇪🇺 Eurozona: ECB DFR, HICP, Bund 10Y, BTP-Bund spread, PMI, ZEW
+  - Fuente: ECB SDW (SDMX REST)
+  - Crear `lib/sources/ecb.ts` + wire en snapshot/backfill
 
 **UX:**
 - BTC/ARS derivado: BTC × USDT (crypto) — computar client-side
@@ -209,8 +221,7 @@ curl -X POST "$URL/api/admin/backfill?source=coingecko&years=1"      -H "Authori
 
 **Operations:**
 - Health check `/api/health`: last cron timestamp + Mongo connectivity + source staleness
-- Cron run log: colección `cron_runs` con timestamp, bySource counts, errors — para debugging futuro
-- Tighten Mongo network access: reemplazar `0.0.0.0/0` con egress IPs de Vercel
+- Cron run log: colección `cron_runs` con timestamp, bySource counts, errors
 
 ### Sprint v0.4
 
@@ -226,10 +237,13 @@ curl -X POST "$URL/api/admin/backfill?source=coingecko&years=1"      -H "Authori
 **Auth:**
 - Clerk o Auth.js — single user o multi-user con indicadores personalizables
 
+**China ampliado:**
+- PPI y PMI Caixin con fuente alternativa (NBS directo o Stooq)
+
 ### Sprint v0.5+
 
 **Insights LLM:**
-- Resumen semanal generado los lunes con Claude API (ya sabés el patrón)
+- Resumen semanal generado los lunes con Claude API
 - Narrativa automática de los moves de la semana
 
 **Mejoras técnicas:**
@@ -296,8 +310,8 @@ curl -X POST "$URL/api/admin/backfill?source=coingecko&years=1"      -H "Authori
 | `MONGODB_URI` | local + Vercel | Connection string Atlas M0 |
 | `MONGODB_DB` | local + Vercel | `radar` |
 | `CRON_SECRET` | local + Vercel | Bearer token para `/api/cron/*` y `/api/admin/*` |
-| `FRED_API_KEY` | local + Vercel | FRED fetcher (ya configurada en Vercel) |
-| `COINGECKO_API_KEY` | — pendiente — | Demo API key para desbloquear history desde Vercel |
+| `FRED_API_KEY` | local + Vercel | FRED fetcher |
+| `COINGECKO_API_KEY` | local + Vercel | Demo API key — desbloquea `/market_chart` desde IPs de servidor |
 
 Local viven en `.env.local` (gitignored).
 
@@ -307,7 +321,7 @@ Local viven en `.env.local` (gitignored).
 |---|---|---|---|
 | `/api/cron/daily` | GET/POST | Bearer CRON_SECRET | Snapshot diario de todas las fuentes |
 | `/api/admin/backfill?source=&years=&from=` | GET/POST | Bearer CRON_SECRET | Backfill histórico por fuente |
-| `/api/snapshots/latest` | GET | — | Último valor por indicador (21 rows) |
+| `/api/snapshots/latest` | GET | — | Último valor por indicador |
 | `/api/snapshots/history?days=&indicators=&from=` | GET | — | Series temporales por indicador |
 
 ### URLs y recursos
@@ -319,6 +333,7 @@ Local viven en `.env.local` (gitignored).
 - **BCRA API docs:** https://bcra.gob.ar/documentacion-apis/?fileName=estadisticas-monetarias-v4
 - **DolarAPI:** https://dolarapi.com/
 - **ArgentinaDatos:** https://argentinadatos.com/
+- **ECB SDW:** https://data.ecb.europa.eu/help/api/overview (para Eurozona, sprint v0.3 pendiente)
 
 ### Documentos relacionados
 
@@ -332,10 +347,12 @@ Local viven en `.env.local` (gitignored).
 
 ```
 1. Leer este archivo (HANDOFF.md).
-2. El proyecto está en producción y sin deuda pendiente — no hay que compilar ni pushear nada.
-3. Revisar "Problemas conocidos" para contexto:
-   - BCRA tasa política desactualizada (variable 160 discontinuada por el BCRA)
-   - CoinGecko history bloqueado desde IPs de Vercel (fix: agregar COINGECKO_API_KEY demo)
-4. El siguiente sprint es v0.3: Eurozona + China + fix BCRA variable + CoinGecko key.
-5. Para cualquier cambio: editar en el worktree activo, `npm run build` para validar, PR a main.
+2. El proyecto está en producción en v0.3 parcial — BCRA, CoinGecko y China resueltos.
+3. Próximos ítems de v0.3:
+   a. Eurozona (ECB SDW) — nueva fuente lib/sources/ecb.ts
+   b. UX: BTC/ARS derivado, tiles de brecha, stale badge
+   c. Operations: /api/health, cron_runs collection
+4. Para cualquier cambio: editar en worktree → npm run build → commit → push → PR → gh pr merge → Vercel auto-deploya.
+   NUNCA usar "vercel --prod" desde local.
+5. Al terminar la sesión: actualizar este HANDOFF.md y pushear a main.
 ```
