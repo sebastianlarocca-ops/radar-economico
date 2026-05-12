@@ -58,6 +58,25 @@ export function Sparkline({ data, color = "#2563eb" }: { data: DataPoint[]; colo
   );
 }
 
+function makeLabels(points: DataPoint[]): string[] {
+  if (points.length === 0) return [];
+  const firstYear = new Date(points[0].t).getUTCFullYear();
+  const lastYear  = new Date(points[points.length - 1].t).getUTCFullYear();
+  const multiYear = lastYear !== firstYear;
+
+  return points.map((d) => {
+    const dt = new Date(d.t);
+    if (multiYear) {
+      // "may '21" — compact month + 2-digit year
+      const mon = dt.toLocaleDateString("es-AR", { month: "short", timeZone: "UTC" });
+      const yr  = String(dt.getUTCFullYear()).slice(2);
+      return `${mon} '${yr}`;
+    }
+    // Single year: keep day + month (no year noise)
+    return dt.toLocaleDateString("es-AR", { day: "2-digit", month: "short", timeZone: "UTC" });
+  });
+}
+
 export type LineDataset = {
   label: string;
   data: DataPoint[];
@@ -91,11 +110,9 @@ export function LineChart({
     yAxisID: ds.yAxisID ?? "y",
   }));
 
-  // Use labels from the first dataset (all share the same dates when same-source)
-  const labels = datasets[0]?.data.map((d) => {
-    const dt = new Date(d.t);
-    return dt.toLocaleDateString("es-AR", { day: "2-digit", month: "short", timeZone: "UTC" });
-  }) ?? [];
+  // Use labels from the longest dataset (best date coverage for mixed-source charts)
+  const longestDs = datasets.reduce((a, b) => a.data.length >= b.data.length ? a : b, datasets[0]);
+  const labels = makeLabels(longestDs?.data ?? []);
 
   const scales: Record<string, object> = {
     x: {
@@ -166,10 +183,7 @@ export function BarChart({
   color?: string;
   height?: number;
 }) {
-  const labels = data.map((d) => {
-    const dt = new Date(d.t);
-    return dt.toLocaleDateString("es-AR", { month: "short", year: "2-digit", timeZone: "UTC" });
-  });
+  const labels = makeLabels(data);
 
   return (
     <div style={{ height }}>
