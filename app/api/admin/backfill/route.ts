@@ -12,7 +12,7 @@ function isAuthorized(req: NextRequest): boolean {
   return auth === `Bearer ${secret}`;
 }
 
-const ALLOWED: BackfillSource[] = ["argentinadatos", "bcra", "fred", "coingecko", "all"];
+const ALLOWED: BackfillSource[] = ["argentinadatos", "bcra", "fred", "coingecko", "ecb", "all"];
 
 /**
  * POST /api/admin/backfill?source=<src>&years=5

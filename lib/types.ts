@@ -46,6 +46,11 @@ export type DolarApiConfig = {
   leg: "venta" | "compra";
 };
 
+export type EcbConfig = {
+  flow: string;   // e.g. "FM", "ICP", "EXR", "YC"
+  key: string;    // e.g. "B.U2.EUR.4F.KR.DFR.LEV"
+};
+
 /**
  * Static description of an indicator — title, region, unit, and how to fetch it.
  */
@@ -56,11 +61,12 @@ export type IndicatorMeta = {
   category: Category;
   unit: Unit;
   decimals?: number;
-  source: "dolarapi" | "coingecko" | "argentinadatos" | "bcra" | "fred";
+  source: "dolarapi" | "coingecko" | "argentinadatos" | "bcra" | "fred" | "ecb";
   // Source-specific config (only one set per row)
   fred?: FredConfig;
   bcra?: BcraConfig;
   argentinadatos?: ArgentinaDatosConfig;
   coingecko?: CoinGeckoConfig;
   dolarapi?: DolarApiConfig;
+  ecb?: EcbConfig;
 };

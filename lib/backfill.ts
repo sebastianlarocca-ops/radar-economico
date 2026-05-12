@@ -3,9 +3,10 @@ import { fetchArgentinaDatosHistory } from "./sources/argentinadatos";
 import { fetchBcraHistory } from "./sources/bcra";
 import { fetchFredHistory } from "./sources/fred";
 import { fetchCoinGeckoHistory } from "./sources/coingecko";
+import { fetchEcbHistory } from "./sources/ecb";
 import type { IndicatorValue } from "./types";
 
-export type BackfillSource = "argentinadatos" | "bcra" | "fred" | "coingecko" | "all";
+export type BackfillSource = "argentinadatos" | "bcra" | "fred" | "coingecko" | "ecb" | "all";
 
 export type BackfillResult = {
   ok: boolean;
@@ -23,6 +24,7 @@ const FETCHERS: Record<Exclude<BackfillSource, "all">, (from: Date) => Promise<I
   bcra:           fetchBcraHistory,
   fred:           fetchFredHistory,
   coingecko:      fetchCoinGeckoHistory,
+  ecb:            fetchEcbHistory,
 };
 
 /**

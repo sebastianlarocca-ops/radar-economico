@@ -34,6 +34,10 @@ const COLORS = {
   cnPpi: "#92400e",
   cnFx: "#dc2626",
   cnPmi: "#15803d",
+  euDfr: "#1d4ed8",
+  euBund: "#7c3aed",
+  euHicp: "#dc2626",
+  euEurusd: "#0f766e",
 };
 
 // Stale threshold (days) per indicator — shown as amber badge on Tile
@@ -50,6 +54,8 @@ const STALE_DAYS: Record<string, number> = {
   "us.cpi.yoy":              45, "us.unrate":               45, "us.payems": 45,
   "us.dxy_broad":             2,
   "cn.cpi.yoy":              45, "cn.fx.usdcny":             2,
+  "eu.ecb.dfr":               7, "eu.hicp.yoy":             45,
+  "eu.fx.eurusd":             2, "eu.rates.bund10y":         2,
 };
 
 // Plain-language descriptions for each indicator
@@ -79,6 +85,11 @@ const INFO: Record<string, string> = {
   "cn.ppi.yoy":                 "Inflación mayorista en China. Indicador adelantado de presiones de costos que luego se trasladan al consumidor global.",
   "cn.fx.usdcny":               "Yuan chino por dólar. Un CNY más débil (número mayor) abarata exportaciones chinas. El PBOC fija un tipo de referencia diario.",
   "cn.pmi.caixin":              "PMI manufacturero de Caixin/S&P para China. Por encima de 50 = expansión. Refleja el pulso de la fábrica del mundo.",
+  // EU
+  "eu.ecb.dfr":                 "Tasa de facilidad de depósito del BCE. Tasa mínima a la que los bancos pueden depositar liquidez en el BCE overnight. Ancla la política monetaria de la eurozona.",
+  "eu.hicp.yoy":                "Inflación interanual de la eurozona medida por el HICP (Índice Armonizado de Precios al Consumidor). Dato oficial del Eurostat. Objetivo del BCE: 2%.",
+  "eu.fx.eurusd":               "Tipo de cambio euro / dólar. Publicado por el BCE como tasa de referencia diaria. Sube cuando el euro se aprecia frente al dólar.",
+  "eu.rates.bund10y":           "Rendimiento implícito a 10 años de la curva de bonos soberanos AAA de la eurozona (proxy del Bund alemán). Calculado por el BCE vía modelo de Nelson-Siegel-Svensson.",
   // Derived
   "derived.btc.ars":            "Bitcoin expresado en pesos argentinos. Se calcula multiplicando el precio de BTC en USD por el tipo de cambio USDT/ARS (dólar cripto).",
   "derived.brecha.cripto_blue": "Diferencia porcentual entre el dólar cripto (USDT) y el dólar blue. Positivo = USDT cotiza por encima del blue.",
@@ -97,6 +108,9 @@ const CHART_INFO: Record<string, string> = {
   "us-cpi":           "Inflación interanual de EE.UU. Dato mensual — se actualiza una vez al mes.",
   "cn-fx":            "Evolución del tipo de cambio USD/CNY. Sube cuando el yuan se deprecia frente al dólar.",
   "cn-prices":        "CPI e IPC mayorista (PPI) de China en variación interanual. Fuente: FRED (datos oficiales chinos vía OCDE).",
+  "eu-rates":         "Evolución de la tasa DFR del BCE y el rendimiento del bono AAA a 10 años de la eurozona.",
+  "eu-hicp":          "Inflación interanual de la eurozona (HICP). Dato mensual — se actualiza una vez al mes.",
+  "eu-eurusd":        "Evolución del tipo de cambio EUR/USD. Fuente: BCE (tasa de referencia diaria).",
 };
 
 type SeriesMap = Record<string, DataPoint[]>;
@@ -541,10 +555,57 @@ export function DashboardClient({
         )}
       </Section>
 
-      <Section title="🇪🇺 Eurozona" chip={{ text: "v0.3", tone: "pending" }}>
-        <div className="bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-xl p-4 text-[13px] text-[var(--muted)]">
-          Llega en v0.3: ECB DFR, HICP, Bund 10Y, BTP spread (vía ECB SDW + Eurostat).
-        </div>
+      {/* EUROZONA */}
+      <Section title="🇪🇺 Eurozona" chip={{ text: "ECB SDW", tone: "live" }}>
+        {(() => {
+          const euTiles = byIds(latest, ["eu.ecb.dfr", "eu.hicp.yoy", "eu.fx.eurusd", "eu.rates.bund10y"]);
+          const euColors: Record<string, string> = {
+            "eu.ecb.dfr":       COLORS.euDfr,
+            "eu.hicp.yoy":      COLORS.euHicp,
+            "eu.fx.eurusd":     COLORS.euEurusd,
+            "eu.rates.bund10y": COLORS.euBund,
+          };
+          const euRatesDatasets = [
+            { label: "ECB DFR",   data: spark("eu.ecb.dfr"),       color: COLORS.euDfr  },
+            { label: "Bund 10Y",  data: spark("eu.rates.bund10y"), color: COLORS.euBund },
+          ].filter((d) => d.data.length >= 2);
+          const euHicpData   = spark("eu.hicp.yoy");
+          const euEurusdData = spark("eu.fx.eurusd");
+
+          if (!euTiles.some((r) => r.value !== null)) {
+            return (
+              <div className="bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-xl p-4 text-[13px] text-[var(--muted)]">
+                Sin datos todavía. Corré el backfill: <code className="bg-[var(--chip-bg)] px-1 rounded">source=ecb</code>
+              </div>
+            );
+          }
+          return (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {euTiles.map((r) => (
+                  <Tile key={r.id} row={r}
+                    sparkline={spark(r.id)} sparkColor={euColors[r.id]}
+                    info={INFO[r.id]}
+                    staleAfterDays={STALE_DAYS[r.id]}
+                  />
+                ))}
+              </div>
+              {euRatesDatasets.length >= 1 && (
+                <ChartBox title="DFR y Bund 10Y" hint="% anual" infoKey="eu-rates">
+                  <LineChart datasets={euRatesDatasets} />
+                </ChartBox>
+              )}
+              <ChartBox title="HICP YoY" hint="% interanual · dato mensual" infoKey="eu-hicp" noData={euHicpData.length < 2}>
+                <LineChart datasets={[{ label: "HICP YoY", data: euHicpData, color: COLORS.euHicp }]} />
+              </ChartBox>
+              {euEurusdData.length >= 2 && (
+                <ChartBox title="EUR/USD" hint="USD por euro · referencia BCE" infoKey="eu-eurusd">
+                  <LineChart datasets={[{ label: "EUR/USD", data: euEurusdData, color: COLORS.euEurusd }]} />
+                </ChartBox>
+              )}
+            </>
+          );
+        })()}
       </Section>
 
       {/* CHINA */}
@@ -588,7 +649,7 @@ export function DashboardClient({
       </Section>
 
       <footer className="mt-8 pt-4 border-t border-[var(--border)] text-center text-[11px] text-[var(--muted)] leading-relaxed">
-        Radar Económico v0.3 — Next.js + MongoDB · DolarAPI · ArgentinaDatos · CoinGecko · BCRA · FRED<br />
+        Radar Económico v0.3 — Next.js + MongoDB · DolarAPI · ArgentinaDatos · CoinGecko · BCRA · FRED · ECB SDW<br />
         Cron diario 10:00 UTC · datos desde {rangeDays === "max" ? "siempre" : `últimos ${rangeDays}d`}
       </footer>
     </main>

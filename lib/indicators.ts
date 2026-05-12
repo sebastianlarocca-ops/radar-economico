@@ -52,6 +52,16 @@ export const INDICATORS: IndicatorMeta[] = [
   { id: "us.dxy_broad",                   label: "USD index (broad TW)",       region: "US", category: "fx",        unit: "INDEX", decimals: 2, source: "fred", fred: { series_id: "DTWEXBGS" } },
 
   // ============================================
+  // EU (ECB SDW — SDMX REST, no API key needed)
+  // PMI Compuesto y ZEW omitidos: son de Markit/ZEW y no están en ECB SDW.
+  // BTP-Bund spread pendiente: requiere serie adicional IRS Italy 10Y.
+  // ============================================
+  { id: "eu.ecb.dfr",       label: "ECB DFR",          region: "EU", category: "rates",     unit: "PCT",   decimals: 2, source: "ecb", ecb: { flow: "FM",  key: "B.U2.EUR.4F.KR.DFR.LEV" } },
+  { id: "eu.hicp.yoy",      label: "HICP YoY",          region: "EU", category: "inflation", unit: "PCT",   decimals: 1, source: "ecb", ecb: { flow: "ICP", key: "M.U2.N.000000.4.ANR" } },
+  { id: "eu.fx.eurusd",     label: "EUR/USD",            region: "EU", category: "fx",        unit: "RATIO", decimals: 4, source: "ecb", ecb: { flow: "EXR", key: "D.USD.EUR.SP00.A" } },
+  { id: "eu.rates.bund10y", label: "Bund 10Y (AAA EZ)", region: "EU", category: "rates",     unit: "PCT",   decimals: 2, source: "ecb", ecb: { flow: "YC",  key: "B.U2.EUR.4F.G_N_A.SV_C_YM.SR_10Y" } },
+
+  // ============================================
   // China (FRED mirrors)
   // ============================================
   { id: "cn.cpi.yoy",                     label: "CPI YoY",                    region: "CN", category: "inflation", unit: "PCT",   decimals: 1, source: "fred", fred: { series_id: "CHNCPIALLMINMEI", units: "pc1" } },
