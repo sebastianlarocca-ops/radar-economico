@@ -36,6 +36,22 @@ const COLORS = {
   cnPmi: "#15803d",
 };
 
+// Stale threshold (days) per indicator — shown as amber badge on Tile
+const STALE_DAYS: Record<string, number> = {
+  "ar.dolar.oficial.venta":   2, "ar.dolar.oficial.compra":  2,
+  "ar.dolar.mayorista.venta": 2, "ar.dolar.blue.venta":      2,
+  "ar.dolar.mep.venta":       2, "ar.dolar.ccl.venta":       2,
+  "ar.dolar.cripto.venta":    2, "ar.dolar.tarjeta.venta":   2,
+  "ar.riesgo_pais":           2,
+  "ar.ipc.mensual":          45,
+  "ar.bcra.tasa_politica":    7, "ar.bcra.reservas":         7, "ar.bcra.base_monetaria": 7,
+  "crypto.btc.usd":           2, "crypto.eth.usd":           2,
+  "us.fed_funds.upper":       7, "us.ust.dgs10":             2,
+  "us.cpi.yoy":              45, "us.unrate":               45, "us.payems": 45,
+  "us.dxy_broad":             2,
+  "cn.cpi.yoy":              45, "cn.fx.usdcny":             2,
+};
+
 // Plain-language descriptions for each indicator
 const INFO: Record<string, string> = {
   "ar.dolar.oficial.venta":     "Tipo de cambio oficial publicado por el BNA. Es el precio al que el banco vende dólares al público.",
@@ -63,6 +79,10 @@ const INFO: Record<string, string> = {
   "cn.ppi.yoy":                 "Inflación mayorista en China. Indicador adelantado de presiones de costos que luego se trasladan al consumidor global.",
   "cn.fx.usdcny":               "Yuan chino por dólar. Un CNY más débil (número mayor) abarata exportaciones chinas. El PBOC fija un tipo de referencia diario.",
   "cn.pmi.caixin":              "PMI manufacturero de Caixin/S&P para China. Por encima de 50 = expansión. Refleja el pulso de la fábrica del mundo.",
+  // Derived
+  "derived.btc.ars":            "Bitcoin expresado en pesos argentinos. Se calcula multiplicando el precio de BTC en USD por el tipo de cambio USDT/ARS (dólar cripto).",
+  "derived.brecha.cripto_blue": "Diferencia porcentual entre el dólar cripto (USDT) y el dólar blue. Positivo = USDT cotiza por encima del blue.",
+  "derived.brecha.cripto_ccl":  "Diferencia porcentual entre el dólar cripto (USDT) y el CCL. Positivo = USDT cotiza por encima del CCL.",
 };
 
 // Chart-level descriptions
@@ -193,8 +213,34 @@ export function DashboardClient({
   const sparkFiltered = (id: string): DataPoint[] => filterRange(history[id] ?? [], rangeDays);
 
   const oficialVenta = byId(latest, "ar.dolar.oficial.venta")?.value ?? null;
-  const cclVenta = byId(latest, "ar.dolar.ccl.venta")?.value ?? null;
-  const blueVenta = byId(latest, "ar.dolar.blue.venta")?.value ?? null;
+  const cclVenta    = byId(latest, "ar.dolar.ccl.venta")?.value ?? null;
+  const blueVenta   = byId(latest, "ar.dolar.blue.venta")?.value ?? null;
+  const criptoRow   = byId(latest, "ar.dolar.cripto.venta");
+  const criptoVenta = criptoRow?.value ?? null;
+  const btcRow      = byId(latest, "crypto.btc.usd");
+
+  function brechaVal(a: number | null, b: number | null): number | null {
+    if (!a || !b) return null;
+    return +((a / b - 1) * 100).toFixed(1);
+  }
+
+  // Derived rows (computed client-side, not in DB)
+  const btcArsValue = btcRow?.value && criptoVenta ? Math.round(btcRow.value * criptoVenta) : null;
+  const btcArsRow: LatestRow = {
+    id: "derived.btc.ars", label: "Bitcoin (ARS)",
+    region: "GLOBAL", category: "crypto", unit: "ARS", decimals: 0,
+    value: btcArsValue, timestamp: btcRow?.timestamp ?? null, source: "derivado", meta: null,
+  };
+  const brechaBlueRow: LatestRow = {
+    id: "derived.brecha.cripto_blue", label: "USDT vs Blue",
+    region: "AR", category: "fx", unit: "PCT", decimals: 1,
+    value: brechaVal(criptoVenta, blueVenta), timestamp: criptoRow?.timestamp ?? null, source: "derivado", meta: null,
+  };
+  const brechaCclRow: LatestRow = {
+    id: "derived.brecha.cripto_ccl", label: "USDT vs CCL",
+    region: "AR", category: "fx", unit: "PCT", decimals: 1,
+    value: brechaVal(criptoVenta, cclVenta), timestamp: criptoRow?.timestamp ?? null, source: "derivado", meta: null,
+  };
 
   const lastUpdate = latest.map((r) => r.timestamp).filter((t): t is string => !!t).sort().pop() ?? null;
 
@@ -270,6 +316,14 @@ export function DashboardClient({
     { label: "ETH/USD", data: ethData, color: COLORS.eth, yAxisID: "y1" },
   ].filter((d) => d.data.length >= 2);
 
+  const btcArsSparkline = (() => {
+    const criptoMap = new Map(spark("ar.dolar.cripto.venta").map((p) => [p.t, p.v]));
+    return spark("crypto.btc.usd").flatMap((p) => {
+      const usdt = criptoMap.get(p.t);
+      return usdt ? [{ t: p.t, v: Math.round(p.v * usdt) }] : [];
+    });
+  })();
+
   // --- USA ---
   const usTiles = byIds(latest, [
     "us.fed_funds.upper", "us.ust.dgs10", "us.cpi.yoy",
@@ -311,6 +365,7 @@ export function DashboardClient({
               sub={tileSubs[r.id]}
               sparkline={spark(r.id)} sparkColor={tileColors[r.id]}
               info={INFO[r.id]}
+              staleAfterDays={STALE_DAYS[r.id]}
             />
           ))}
         </div>
@@ -365,6 +420,18 @@ export function DashboardClient({
             <LineChart datasets={brechaDatasets} />
           </ChartBox>
         )}
+
+        {(brechaBlueRow.value !== null || brechaCclRow.value !== null) && (
+          <div className="mt-3">
+            <div className="text-[10.5px] uppercase tracking-wider font-bold text-[var(--muted)] mb-2">
+              Brecha cripto (USDT)
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <Tile row={brechaBlueRow} info={INFO["derived.brecha.cripto_blue"]} />
+              <Tile row={brechaCclRow}  info={INFO["derived.brecha.cripto_ccl"]} />
+            </div>
+          </div>
+        )}
       </Section>
 
       {/* AR · MACRO */}
@@ -375,6 +442,7 @@ export function DashboardClient({
               sparkline={spark(r.id)}
               sparkColor={r.id === "ar.riesgo_pais" ? COLORS.riesgo : COLORS.ipc}
               info={INFO[r.id]}
+              staleAfterDays={STALE_DAYS[r.id]}
             />
           ))}
         </div>
@@ -398,7 +466,7 @@ export function DashboardClient({
           {bcraTiles.map((r) => {
             const c = r.id === "ar.bcra.tasa_politica" ? COLORS.tasa
               : r.id === "ar.bcra.reservas" ? COLORS.reservas : COLORS.base;
-            return <Tile key={r.id} row={r} sparkline={spark(r.id)} sparkColor={c} info={INFO[r.id]} />;
+            return <Tile key={r.id} row={r} sparkline={spark(r.id)} sparkColor={c} info={INFO[r.id]} staleAfterDays={STALE_DAYS[r.id]} />;
           })}
         </div>
 
@@ -420,8 +488,16 @@ export function DashboardClient({
               sparkline={spark(r.id)}
               sparkColor={r.id === "crypto.btc.usd" ? COLORS.btc : COLORS.eth}
               info={INFO[r.id]}
+              staleAfterDays={STALE_DAYS[r.id]}
             />
           ))}
+          {btcArsRow.value !== null && (
+            <Tile row={btcArsRow}
+              sparkline={btcArsSparkline}
+              sparkColor={COLORS.btc}
+              info={INFO["derived.btc.ars"]}
+            />
+          )}
         </div>
 
         <ChartBox title="BTC y ETH" hint="USD · ejes separados" infoKey="crypto-chart" noData={!cryptoHasHistory}>
@@ -438,6 +514,7 @@ export function DashboardClient({
                 <Tile key={r.id} row={r}
                   sparkline={spark(r.id)} sparkColor={usColors[r.id]}
                   info={INFO[r.id]}
+                  staleAfterDays={STALE_DAYS[r.id]}
                 />
               ))}
             </div>
@@ -492,7 +569,7 @@ export function DashboardClient({
             <>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {cnTiles.map(r => (
-                  <Tile key={r.id} row={r} sparkline={spark(r.id)} sparkColor={cnColors[r.id]} info={INFO[r.id]} />
+                  <Tile key={r.id} row={r} sparkline={spark(r.id)} sparkColor={cnColors[r.id]} info={INFO[r.id]} staleAfterDays={STALE_DAYS[r.id]} />
                 ))}
               </div>
               {cnFxData.length >= 2 && (
