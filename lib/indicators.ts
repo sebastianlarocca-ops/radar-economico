@@ -50,6 +50,14 @@ export const INDICATORS: IndicatorMeta[] = [
   { id: "us.unrate",                      label: "Unemployment rate",          region: "US", category: "activity",  unit: "PCT", decimals: 1, source: "fred", fred: { series_id: "UNRATE" } },
   { id: "us.payems",                      label: "Nonfarm Payrolls",           region: "US", category: "activity",  unit: "NUMBER", decimals: 0, source: "fred", fred: { series_id: "PAYEMS" } },
   { id: "us.dxy_broad",                   label: "USD index (broad TW)",       region: "US", category: "fx",        unit: "INDEX", decimals: 2, source: "fred", fred: { series_id: "DTWEXBGS" } },
+
+  // ============================================
+  // China (FRED mirrors)
+  // ============================================
+  { id: "cn.cpi.yoy",                     label: "CPI YoY",                    region: "CN", category: "inflation", unit: "PCT",   decimals: 1, source: "fred", fred: { series_id: "CHNCPIALLMINMEI", units: "pc1" } },
+  { id: "cn.ppi.yoy",                     label: "PPI YoY",                    region: "CN", category: "inflation", unit: "PCT",   decimals: 1, source: "fred", fred: { series_id: "PPICHO01CNM661N", units: "pc1" } },
+  { id: "cn.fx.usdcny",                   label: "USD/CNY",                    region: "CN", category: "fx",        unit: "RATIO", decimals: 4, source: "fred", fred: { series_id: "DEXCHUS" } },
+  { id: "cn.pmi.caixin",                  label: "PMI Caixin (manufactura)",   region: "CN", category: "activity",  unit: "INDEX", decimals: 1, source: "fred", fred: { series_id: "CHNMFGPMI" } },
 ];
 
 /** Map for O(1) lookup. */
