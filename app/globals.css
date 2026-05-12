@@ -391,6 +391,7 @@ body::before {
 .legend-pill:hover { color: var(--t-1); background: rgba(255,255,255,0.04); }
 .legend-pill .swatch { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
 .legend-pill.muted { opacity: .35; }
+.legend-pill.locked { background: rgba(255,255,255,0.08); color: var(--t-1); outline: 1px solid rgba(255,255,255,0.14); }
 
 /* ── Axis ticks ──────────────────────────────────────────────────────── */
 .axis-tick {
