@@ -330,10 +330,10 @@ body::before {
 }
 
 @keyframes brand-pulse {
-  0%   { color: #5B9DFF; text-shadow: 0 0 8px rgba(91,157,255,0.5); }
-  33%  { color: #34D399; text-shadow: 0 0 8px rgba(52,211,153,0.5); }
-  66%  { color: #F87171; text-shadow: 0 0 8px rgba(248,113,113,0.5); }
-  100% { color: #5B9DFF; text-shadow: 0 0 8px rgba(91,157,255,0.5); }
+  0%   { color: #5B9DFF; text-shadow: 0 0 16px rgba(91,157,255,0.9), 0 0 40px rgba(91,157,255,0.4); }
+  33%  { color: #34D399; text-shadow: 0 0 16px rgba(52,211,153,0.9), 0 0 40px rgba(52,211,153,0.4); }
+  66%  { color: #F87171; text-shadow: 0 0 16px rgba(248,113,113,0.9), 0 0 40px rgba(248,113,113,0.4); }
+  100% { color: #5B9DFF; text-shadow: 0 0 16px rgba(91,157,255,0.9), 0 0 40px rgba(91,157,255,0.4); }
 }
 .brand-pulse {
   animation: brand-pulse 4s ease-in-out infinite;
