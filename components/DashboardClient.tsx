@@ -281,7 +281,7 @@ function Header({
           </span>
         </div>
 
-        <nav style={{ display: "flex", gap: 4, marginLeft: 4 }}>
+        <nav className="mp-header-nav">
           {["Dashboard", "Indicators", "Calendar", "Alerts"].map((n, i) => (
             <button
               key={n}
@@ -293,7 +293,7 @@ function Header({
           ))}
         </nav>
 
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+        <div className="mp-header-actions">
           <div className="mp-search">
             <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ color: "var(--t-3)", flexShrink: 0 }}>
               <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.4" />
@@ -472,7 +472,7 @@ export function DashboardClient({
         history={history}
       />
 
-      <main className="mp-container" style={{ padding: "32px 28px 96px", position: "relative", zIndex: 1 }}>
+      <main className="mp-container mp-main">
         {loading && (
           <div style={{ position: "fixed", top: 70, right: 24, zIndex: 60, display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, color: "var(--t-3)" }}>
             <span className="live-dot" style={{ background: "var(--amber)", animationDuration: "1s" }} />
@@ -548,7 +548,7 @@ export function DashboardClient({
 
             {/* Evolución + Brecha charts */}
             <section className="mp-section" style={{ paddingTop: 0 }}>
-              <div className="row-grid" style={{ gridTemplateColumns: "minmax(0,1.4fr) minmax(0,1fr)", gap: 16 }}>
+              <div className="chart-split">
                 {dolarDatasets.length >= 1 && (
                   <ChartCard eyebrow="Evolución del Dólar" hint="ARS por USD · venta" infoKey="dolar-evolucion">
                     <LineChart datasets={dolarDatasets} height={300} showLegend formatY={(v) => Math.round(v).toLocaleString("es-AR")} />
@@ -573,7 +573,7 @@ export function DashboardClient({
 
             {/* Riesgo País chart + Brecha cripto tiles */}
             <section className="mp-section" style={{ paddingTop: 0 }}>
-              <div className="row-grid" style={{ gridTemplateColumns: "minmax(0,1.4fr) minmax(0,1fr)", gap: 16 }}>
+              <div className="chart-split">
                 <ChartCard eyebrow="Riesgo País" hint="EMBI+ AR · puntos básicos" infoKey="riesgo">
                   <LineChart
                     datasets={[{ label: "EMBI+ AR", data: spark("ar.riesgo_pais"), color: C.red }]}
